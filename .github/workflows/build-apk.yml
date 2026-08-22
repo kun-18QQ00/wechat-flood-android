@@ -42,13 +42,6 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython
 
-      - name: Accept Android SDK licenses
-        run: |
-          mkdir -p $ANDROID_SDK/licenses
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" >> $ANDROID_SDK/licenses/android-sdk-license
-          echo "d975f751698a77b662f1254ddbeed3901e976f5a" >> $ANDROID_SDK/licenses/android-sdk-license
-
       - name: Build APK (debug)
         run: |
           buildozer android debug
@@ -87,7 +80,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload APK as artifact
-        if: !startsWith(github.ref, 'refs/tags/')
+        if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
         with:
           name: wechat-flood-apk
