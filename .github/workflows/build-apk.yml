@@ -18,20 +18,23 @@ jobs:
 
       - name: Patch pip for Python 3.14
         run: |
-          # Create a pip wrapper that skips self-upgrade
-          mv /usr/local/bin/pip /usr/local/bin/pip-original
-          cat > /usr/local/bin/pip << 'WRAPPER'
+          # Find pip location
+          PIP_BIN=$(which pip3 || which pip || echo "")
+          echo "pip at: $PIP_BIN"
+          if [ -n "$PIP_BIN" ]; then
+            mv "$PIP_BIN" "${PIP_BIN}-original"
+            cat > "$PIP_BIN" << 'WRAPPER'
           #!/bin/sh
-          # Skip pip self-upgrade
           case "$*" in
             *"install -U pip"*|*"install --upgrade pip"*)
               echo "Skipping pip self-upgrade"
               exit 0
               ;;
           esac
-          exec /usr/local/bin/pip-original "$@"
+          exec "${PIP_BIN}-original" "$@"
           WRAPPER
-          chmod +x /usr/local/bin/pip
+            chmod +x "$PIP_BIN"
+          fi
 
       - name: Build APK
         run: |
