@@ -1,86 +1,105 @@
-# 微信刷屏助手 Android 版 v2.0
+﻿# 微信刷屏助手 Android 版 v3.0
 
-## 功能特性
+一款基于 Kivy 框架的安卓刷屏工具，支持自动复制消息到剪贴板，方便快速发送。
 
-- 📝 自定义消息内容，支持多行
-- ⚡ 可调节发送速度（0.1秒 ~ 5秒）
-- 🔄 三种模式：顺序循环 / 随机发送 / 单条重复
-- ⏱ 定时停止 + 批量停止
-- 💾 消息预设保存/加载
-- 📥 从文件导入消息
-- 📋 实时发送日志
-- 🔁 防重复模式
+## ✨ 功能特性
 
-## 打包 APK 方法
+### 基础功能
+- 📝 **多行消息输入** - 每行一条，支持批量
+- 🔄 **多种发送模式** - 顺序、随机、单条
+- ⏱️ **速度可调** - 0.1秒到5秒间隔
+- ⏸️ **暂停/恢复** - 随时控制
+- 🎯 **批量限制** - 设置发送总数
+- ⏰ **定时停止** - 自动停止功能
 
-### 方法一：GitHub Actions 自动构建（推荐，最简单）
+### v3.0 新增
+- 🌙 **深色模式** - 保护眼睛
+- 📚 **消息历史** - 自动保存，快速复用
+- 📦 **预设消息** - 内置多种常用模板
+- 📱 **自动打开微信** - 一键启动
+- 📳 **振动反馈** - 操作提示
+- 💡 **使用引导** - 首次启动显示说明
 
-1. 在 GitHub 上创建一个新仓库（如 `wechat-flood-android`）
-2. 把整个 `wechat_flood_android` 文件夹的内容上传到仓库
-3. 推送到 `main` 分支后，GitHub Actions 会自动开始构建
-4. 构建完成后，进入仓库 → Actions → 点击最新的构建 → 下载 `wechat-flood-apk` 文件
-5. 解压得到 `.apk` 文件，传到手机安装即可
+## 📲 下载安装
 
-```bash
-# 如果你有 git，可以直接：
-cd wechat_flood_android
-git init
-git add .
-git commit -m "init"
-git remote add origin https://github.com/你的用户名/wechat-flood-android.git
-git push -u origin main
-```
+### 方式一：下载预编译 APK
+1. 前往 [Releases](../../releases) 页面
+2. 下载最新版本的 .apk 文件
+3. 在手机上安装（需要允许安装未知来源应用）
 
-### 方法二：本地构建（需要 Linux 环境）
-
-```bash
-# 1. 安装依赖（Ubuntu/Debian）
-sudo apt-get update
-sudo apt-get install -y build-essential git python3-pip autoconf libtool pkg-config \
-  zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-
-# 2. 安装 buildozer
+### 方式二：自行构建
+`ash
+# 安装依赖
 pip install buildozer cython
 
-# 3. 进入项目目录
-cd wechat_flood_android
-
-# 4. 构建 debug 版 APK
+# 构建 debug 版本
 buildozer android debug
 
-# 5. APK 文件在 bin/ 目录下
-```
+# 构建 release 版本（需要签名配置）
+buildozer android release
+`
 
-### 方法三：WSL (Windows 子系统)
+## 🚀 使用说明
 
-```bash
-# 1. 安装 WSL（管理员 PowerShell）
-wsl --install -d Ubuntu
+1. **输入消息**：在消息框中输入内容，每行一条
+2. **选择模式**：
+   - 顺序：按顺序循环发送
+   - 随机：随机选择消息
+   - 单条：只发第一条
+3. **调整设置**：
+   - 间隔：控制发送速度
+   - 批量：限制发送总数
+   - 定时：设置自动停止时间
+4. **开始发送**：点击「开始」按钮
+5. **切换到微信**：手动粘贴或使用自动打开功能
 
-# 2. 重启电脑后，进入 Ubuntu 终端，按方法二操作
-```
+## ⚠️ 注意事项
 
-## 使用说明
+1. **权限要求**：
+   - 存储权限：用于保存历史记录
+   - 振动权限：用于操作反馈
 
-1. 安装 APK 到安卓手机
-2. 打开应用，输入刷屏消息内容
-3. 调整发送速度、模式等参数
-4. 点击「开始刷屏」
-5. 应用会自动复制消息到剪贴板
-6. 切换到微信聊天窗口，长按输入框 → 粘贴 → 发送
+2. **使用限制**：
+   - 本工具仅复制消息到剪贴板
+   - 需要手动切换到微信粘贴发送
+   - 请遵守微信使用规范
 
-> ⚠️ **注意**：安卓系统限制，无法自动在微信中粘贴发送。
-> 应用会自动将消息复制到剪贴板并弹出提示，你需要手动粘贴到微信。
-> 使用「随机发送」模式 + 快速间隔效果最佳。
+3. **兼容性**：
+   - 支持 Android 5.0 (API 21) 及以上
+   - 支持 ARM 和 ARM64 架构
 
-## 文件结构
+## 🔧 技术栈
 
-```
-wechat_flood_android/
-├── main.py                    # 主程序
-├── buildozer.spec             # 打包配置
-├── README.md                  # 说明文档
-└── .github/
-    └── workflows/
-        └── build-apk.yml      # GitHub Actions 自动构建
-```
+- **Python 3.11**
+- **Kivy** - 跨平台 UI 框架
+- **Buildozer** - 打包工具
+- **PyJNIus** - Java 接口调用
+
+## 📝 更新日志
+
+### v3.0.0 (2026-08-22)
+- ✨ 新增深色模式支持
+- ✨ 新增消息历史记录
+- ✨ 新增预设消息模板
+- ✨ 新增自动打开微信功能
+- ✨ 新增振动反馈
+- ✨ 新增使用引导说明
+- 🎨 优化 UI 设计
+- 🐛 修复已知问题
+
+### v2.0.0
+- 初始安卓版本
+- 基础刷屏功能
+- 多种发送模式
+
+## 📄 许可证
+
+MIT License
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📧 联系方式
+
+如有问题，请提交 Issue。

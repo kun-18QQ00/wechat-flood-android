@@ -2,6 +2,8 @@ name: Build Android APK
 
 on:
   push:
+    tags:
+      - 'v*'
     branches: [ main ]
   workflow_dispatch:
 
@@ -50,9 +52,42 @@ jobs:
       - name: Build APK (debug)
         run: |
           buildozer android debug
-        timeout-minutes: 60
+        timeout-minutes: 120
 
-      - name: Upload APK
+      - name: Get version
+        id: version
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: WeChat Flood ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## 微信刷屏助手 ${{ steps.version.outputs.VERSION }}
+            
+            ### ?? 下载安装
+            下载下方的 `wechat-flood.apk` 文件，在手机上安装即可使用。
+            
+            ### ?? 注意
+            - 首次安装需要允许「未知来源」应用
+            - 需要存储和振动权限
+            
+            ### ?? 更新内容
+            - 自动打开微信功能
+            - 消息历史记录
+            - 深色模式支持
+            - 振动反馈
+          files: bin/*.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK as artifact
+        if: !startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
           name: wechat-flood-apk
