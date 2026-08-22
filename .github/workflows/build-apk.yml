@@ -22,36 +22,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential \
-            git \
-            python3-pip \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            libtinfo6 \
-            cmake \
-            libffi-dev \
-            libssl-dev \
-            automake \
-            zip \
-            unzip \
-            openjdk-17-jdk
+            build-essential git python3-pip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
+            cmake libffi-dev libssl-dev automake zip unzip openjdk-17-jdk
 
       - name: Install Python dependencies
         run: |
           pip install --upgrade "pip<23.3"
           pip install "buildozer<1.5" "cython<3.1"
 
-      - name: Cache buildozer global directory
-        uses: actions/cache@v4
-        with:
-          path: ~/.buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            ${{ runner.os }}-buildozer-
+      - name: Clear old buildozer cache
+        run: |
+          rm -rf ~/.buildozer
+          rm -rf .buildozer
+          rm -rf bin
 
       - name: Build APK (debug)
         run: |
@@ -59,20 +43,11 @@ jobs:
           buildozer android debug
         timeout-minutes: 180
 
-      - name: Find APK file
-        id: find-apk
-        run: |
-          APK_PATH=$(find . -name "*.apk" -type f | head -1)
-          echo "APK_PATH=$APK_PATH" >> $GITHUB_OUTPUT
-          echo "Found APK: $APK_PATH"
-          ls -la bin/ || echo "bin directory not found"
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
-        if: steps.find-apk.outputs.APK_PATH != ''
         with:
           name: wechat-flood-apk
-          path: ${{ steps.find-apk.outputs.APK_PATH }}
+          path: bin/*.apk
 
   release:
     needs: build
@@ -89,32 +64,20 @@ jobs:
 
       - name: Get version
         id: version
-        run: |
-          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
-          name: 微信刷屏助手 ${{ steps.version.outputs.VERSION }}
+          name: "微信刷屏助手 ${{ steps.version.outputs.VERSION }}"
           body: |
             ## 微信刷屏助手 ${{ steps.version.outputs.VERSION }}
-            
             ### ?? 下载安装
             下载下方的 `.apk` 文件，在手机上安装即可使用。
-            
             ### ?? 注意
             - 首次安装需要允许「未知来源」应用
             - 需要存储和振动权限
-            
-            ### ?? 功能特性
-            - ?? 深色模式
-            - ?? 消息历史记录
-            - ?? 预设消息模板
-            - ?? 自动打开微信
-            - ?? 振动反馈
           files: ./apk/*.apk
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
