@@ -8,8 +8,8 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json
 version = 3.0.0
 
-# 依赖 - 指定Python版本
-requirements = python3==3.11.9,kivy,pyjnius,android
+# 依赖
+requirements = python3,kivy,pyjnius,android
 
 # 安卓配置
 android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,VIBRATE
