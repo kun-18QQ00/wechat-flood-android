@@ -9,17 +9,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -38,23 +38,48 @@ jobs:
             libssl-dev \
             automake \
             zip \
-            unzip
+            unzip \
+            openjdk-17-jdk
+
+      - name: Install Python dependencies
+        run: |
           pip install --upgrade pip
           pip install buildozer cython
 
-      - name: Accept Android licenses
-        run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "e6b7c2ab7fa2298c15165e9583d0222b24b9a170" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "d975f751698a77b662f1254ddbeed3901e976f5a" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-arm-dbt-license
+      - name: Cache buildozer global directory
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: ${{ runner.os }}-buildozer
 
       - name: Build APK (debug)
         run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $ANDROID_HOME/licenses
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\ne6b7c2ab7fa2298c15165e9583d0222b24b9a170" >> $ANDROID_HOME/licenses/android-sdk-license
           buildozer android debug
         timeout-minutes: 120
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wechat-flood-apk
+          path: bin/*.apk
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: wechat-flood-apk
+          path: ./apk
 
       - name: Get version
         id: version
@@ -62,35 +87,28 @@ jobs:
           echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
-          name: WeChat Flood ${{ steps.version.outputs.VERSION }}
+          name: 微信刷屏助手 ${{ steps.version.outputs.VERSION }}
           body: |
             ## 微信刷屏助手 ${{ steps.version.outputs.VERSION }}
             
             ### ?? 下载安装
-            下载下方的 `wechat-flood.apk` 文件，在手机上安装即可使用。
+            下载下方的 `.apk` 文件，在手机上安装即可使用。
             
             ### ?? 注意
             - 首次安装需要允许「未知来源」应用
             - 需要存储和振动权限
             
-            ### ?? 更新内容
-            - 自动打开微信功能
-            - 消息历史记录
-            - 深色模式支持
-            - 振动反馈
-          files: bin/*.apk
+            ### ?? 功能特性
+            - ?? 深色模式
+            - ?? 消息历史记录
+            - ?? 预设消息模板
+            - ?? 自动打开微信
+            - ?? 振动反馈
+          files: ./apk/*.apk
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK as artifact
-        if: "!startsWith(github.ref, 'refs/tags/')"
-        uses: actions/upload-artifact@v4
-        with:
-          name: wechat-flood-apk
-          path: bin/*.apk
