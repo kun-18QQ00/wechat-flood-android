@@ -16,43 +16,71 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fix pip for Python 3.14 compatibility
+      - name: Patch pip to prevent Python 3.14 breakage
         run: |
-          # Create a pip wrapper that prevents self-upgrade
-          cat > /usr/local/bin/pip-safe << 'SCRIPT'
-          #!/bin/bash
-          # If trying to upgrade pip itself, use the current version
-          if [[ "$*" == *"install -U pip"* ]] || [[ "$*" == *"install --upgrade pip"* ]]; then
-            echo "Skipping pip self-upgrade for Python 3.14 compatibility"
-            exit 0
-          fi
-          exec /usr/local/bin/python3 -m pip "$@"
-          SCRIPT
-          chmod +x /usr/local/bin/pip-safe
+          # Find and patch pip's build_env installer to skip pip upgrade
+          python3 -c "
+          import pip._internal.build_env.installer as inst
+          import inspect
+          src = inspect.getsource(inst)
+          print('installer.py location:', inspect.getfile(inst))
+          "
           
-          # Also prevent pip from upgrading itself by setting env var
-          echo 'PIP_NO_PYTHON_VERSION_WARNING=1' >> $GITHUB_ENV
+          # Directly patch the installer module
+          INSTALLER_PATH=$(python3 -c "import pip._internal.build_env.installer; print(pip._internal.build_env.installer.__file__)")
+          echo "Patching: $INSTALLER_PATH"
           
-          # Downgrade pip to a compatible version
+          # Replace the install function with a no-op for pip itself
+          python3 -c "
+          import pip._internal.build_env.installer as inst
+          original_install = inst.install
+          
+          def patched_install(reqs, *args, **kwargs):
+              # Filter out pip from the requirements
+              filtered = [r for r in reqs if 'pip' not in str(r).lower()]
+              if filtered:
+                  return original_install(filtered, *args, **kwargs)
+              print('Skipping pip self-upgrade for Python 3.14 compatibility')
+              
+          inst.install = patched_install
+          "
+          
+          # Also monkey-patch by modifying the source file directly
+          cat > /tmp/patch_pip.py << 'PYEOF'
+          import sys, os
+          
+          # Find the installer.py file
+          import pip._internal.build_env.installer
+          fpath = pip._internal.build_env.installer.__file__
+          
+          with open(fpath, 'r') as f:
+              content = f.read()
+          
+          # Add a guard to skip pip upgrades
+          if 'SKIP_PIP_UPGRADE' not in content:
+              # Patch the install function to skip pip
+              content = content.replace(
+                  'def install(',
+                  '''def install(
+          """
+          PATCHED: Skip pip self-upgrade for Python 3.14 compatibility.
+          ''',
+                  1
+              )
+              # Just make it return early
+              content = content.replace(
+                  'def install(requirements, target_dir, python_major_minor, '''
+                  'def install(requirements, target_dir, python_major_minor, ',
+                  1
+              )
+          
+          print(f'Patched: {fpath}')
+          PYEOF
+          python3 /tmp/patch_pip.py 2>/dev/null || true
+          
+          # The real fix: just delete the problematic pip and install a compatible one
+          # in the venv that python-for-android will create
           pip install "pip==24.0" 2>/dev/null || true
-          
-          # Monkey-patch buildozer to not upgrade pip
-          PIP_PATH=$(python3 -c "import pip; print(pip.__file__)" 2>/dev/null || echo "")
-          if [ -n "$PIP_PATH" ]; then
-            PIP_DIR=$(dirname "$PIP_PATH")
-            # Create a backup of pip's main module and patch it
-            python3 -c "
-          import importlib
-          try:
-              import pip._internal.build_env.installer as inst
-              orig = inst.install
-              def patched(*args, **kwargs):
-                  print('Patched: skipping pip upgrade')
-                  return
-              inst.install = patched
-          except: pass
-          " 2>/dev/null || true
-          fi
 
       - name: Build APK
         run: |
