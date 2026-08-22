@@ -16,71 +16,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Patch pip to prevent Python 3.14 breakage
+      - name: Patch pip for Python 3.14
         run: |
-          # Find and patch pip's build_env installer to skip pip upgrade
-          python3 -c "
-          import pip._internal.build_env.installer as inst
-          import inspect
-          src = inspect.getsource(inst)
-          print('installer.py location:', inspect.getfile(inst))
-          "
-          
-          # Directly patch the installer module
-          INSTALLER_PATH=$(python3 -c "import pip._internal.build_env.installer; print(pip._internal.build_env.installer.__file__)")
-          echo "Patching: $INSTALLER_PATH"
-          
-          # Replace the install function with a no-op for pip itself
-          python3 -c "
-          import pip._internal.build_env.installer as inst
-          original_install = inst.install
-          
-          def patched_install(reqs, *args, **kwargs):
-              # Filter out pip from the requirements
-              filtered = [r for r in reqs if 'pip' not in str(r).lower()]
-              if filtered:
-                  return original_install(filtered, *args, **kwargs)
-              print('Skipping pip self-upgrade for Python 3.14 compatibility')
-              
-          inst.install = patched_install
-          "
-          
-          # Also monkey-patch by modifying the source file directly
-          cat > /tmp/patch_pip.py << 'PYEOF'
-          import sys, os
-          
-          # Find the installer.py file
-          import pip._internal.build_env.installer
-          fpath = pip._internal.build_env.installer.__file__
-          
+          # Find installer.py and replace the install function body
+          INSTALLER=$(python3 -c "import pip._internal.build_env.installer as m; print(m.__file__)")
+          echo "Patching $INSTALLER"
+          # Replace the entire file with a minimal version that skips pip upgrade
+          python3 << 'EOF'
+          import pip._internal.build_env.installer as m
+          fpath = m.__file__
           with open(fpath, 'r') as f:
-              content = f.read()
-          
-          # Add a guard to skip pip upgrades
-          if 'SKIP_PIP_UPGRADE' not in content:
-              # Patch the install function to skip pip
-              content = content.replace(
-                  'def install(',
-                  '''def install(
-          """
-          PATCHED: Skip pip self-upgrade for Python 3.14 compatibility.
-          ''',
-                  1
-              )
-              # Just make it return early
-              content = content.replace(
-                  'def install(requirements, target_dir, python_major_minor, '''
-                  'def install(requirements, target_dir, python_major_minor, ',
-                  1
-              )
-          
-          print(f'Patched: {fpath}')
-          PYEOF
-          python3 /tmp/patch_pip.py 2>/dev/null || true
-          
-          # The real fix: just delete the problematic pip and install a compatible one
-          # in the venv that python-for-android will create
-          pip install "pip==24.0" 2>/dev/null || true
+              lines = f.readlines()
+          # Find the install function and make it a no-op for pip
+          new_lines = []
+          in_install = False
+          skip = False
+          for line in lines:
+              if line.startswith('def install('):
+                  in_install = True
+                  new_lines.append(line)
+                  new_lines.append('    """Patched: skip pip self-upgrade"""\n')
+                  new_lines.append('    import sys\n')
+                  new_lines.append('    filtered = [r for r in requirements if "pip" not in str(getattr(r, "name", r)).lower()]\n')
+                  new_lines.append('    if not filtered:\n')
+                  new_lines.append('        return\n')
+                  new_lines.append('    requirements = filtered\n')
+                  skip = True
+                  continue
+              if in_install and skip:
+                  if line.startswith('def ') or line.startswith('class ') or (line and not line[0].isspace() and not line.startswith('#')):
+                      in_install = False
+                      skip = False
+                      new_lines.append(line)
+                  continue
+              new_lines.append(line)
+          with open(fpath, 'w') as f:
+              f.writelines(new_lines)
+          print(f"Patched {fpath}")
+          EOF
 
       - name: Build APK
         run: |
