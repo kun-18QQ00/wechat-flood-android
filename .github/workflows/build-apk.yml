@@ -16,6 +16,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Downgrade pip for Python 3.14 compatibility
+        run: |
+          pip install "pip==24.0"
+          # Also fix the venv pip that buildozer will create
+          python3 -c "import site; print(site.getusersitepackages())"
+
       - name: Build APK
         run: |
           yes | buildozer android debug
