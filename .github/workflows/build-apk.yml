@@ -42,8 +42,8 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade "pip<24"
-          pip install buildozer cython
+          pip install --upgrade "pip<23.3"
+          pip install "buildozer<1.5" "cython<3.1"
 
       - name: Cache buildozer global directory
         uses: actions/cache@v4
@@ -56,9 +56,8 @@ jobs:
       - name: Build APK (debug)
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PIP_NO_BUILD_ISOLATION=1
           buildozer android debug
-        timeout-minutes: 120
+        timeout-minutes: 180
 
       - name: Find APK file
         id: find-apk
@@ -66,9 +65,11 @@ jobs:
           APK_PATH=$(find . -name "*.apk" -type f | head -1)
           echo "APK_PATH=$APK_PATH" >> $GITHUB_OUTPUT
           echo "Found APK: $APK_PATH"
+          ls -la bin/ || echo "bin directory not found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
+        if: steps.find-apk.outputs.APK_PATH != ''
         with:
           name: wechat-flood-apk
           path: ${{ steps.find-apk.outputs.APK_PATH }}
