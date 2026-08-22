@@ -9,16 +9,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: kivy/buildozer:latest
+      options: --user root
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Build APK
-        uses: nicholasgasior/buildozer-action@v2
-        with:
-          buildozer-spec-path: ./buildozer.spec
-          build-mode: debug
-          cache: true
+        run: |
+          buildozer android debug
+        timeout-minutes: 180
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
