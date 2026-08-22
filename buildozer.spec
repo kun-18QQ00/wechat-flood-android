@@ -1,4 +1,4 @@
-﻿[app]
+[app]
 
 # App 基本信息
 title = 微信刷屏助手
