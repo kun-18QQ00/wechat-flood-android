@@ -8,38 +8,41 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    container:
-      image: kivy/buildozer:latest
-      options: --user root
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Patch pip for Python 3.14
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
         run: |
-          # Find pip location
-          PIP_BIN=$(which pip3 || which pip || echo "")
-          echo "pip at: $PIP_BIN"
-          if [ -n "$PIP_BIN" ]; then
-            mv "$PIP_BIN" "${PIP_BIN}-original"
-            cat > "$PIP_BIN" << 'WRAPPER'
-          #!/bin/sh
-          case "$*" in
-            *"install -U pip"*|*"install --upgrade pip"*)
-              echo "Skipping pip self-upgrade"
-              exit 0
-              ;;
-          esac
-          exec "${PIP_BIN}-original" "$@"
-          WRAPPER
-            chmod +x "$PIP_BIN"
-          fi
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git python3-pip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
+            cmake libffi-dev libssl-dev automake zip unzip openjdk-17-jdk
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade "pip<24"
+          pip install "buildozer<1.5" "cython<3.1"
+
+      - name: Accept Android SDK licenses
+        run: |
+          mkdir -p ~/.android
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/android-sdk-license
+          echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.android/android-sdk-license
 
       - name: Build APK
         run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           yes | buildozer android debug
-        timeout-minutes: 180
+        timeout-minutes: 60
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -49,7 +52,7 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
@@ -60,22 +63,16 @@ jobs:
           name: wechat-flood-apk
           path: ./apk
 
-      - name: Get version
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
-          name: "微信刷屏助手 ${{ steps.version.outputs.VERSION }}"
+          name: "微信刷屏助手 v3.0"
           body: |
-            ## 微信刷屏助手 ${{ steps.version.outputs.VERSION }}
-            ### ?? 下载安装
-            下载下方的 `.apk` 文件，在手机上安装即可使用。
+            ## ?? 下载安装
+            下载 `.apk` 文件，在安卓手机上安装即可使用。
             ### ?? 注意
-            - 首次安装需要允许「未知来源」应用
-            - 需要存储和振动权限
+            - 首次安装需允许「未知来源」应用
           files: ./apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
