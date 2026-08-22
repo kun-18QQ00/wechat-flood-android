@@ -18,12 +18,20 @@ jobs:
 
       - name: Patch pip for Python 3.14
         run: |
-          INSTALLER=$(python3 -c "import pip._internal.build_env.installer as m; print(m.__file__)")
-          echo "Patching: $INSTALLER"
-          # Add early return to install function to skip pip upgrade
-          sed -i 's/^def install(requirements, target_dir, python_major_minor,/def install(requirements, target_dir, python_major_minor,/' "$INSTALLER"
-          sed -i '/^def install(/a\    # PATCHED: skip pip self-upgrade\n    requirements = [r for r in requirements if "pip" not in str(getattr(r, "name", r)).lower()]\n    if not requirements:\n        return' "$INSTALLER"
-          echo "Done patching"
+          # Create a pip wrapper that skips self-upgrade
+          mv /usr/local/bin/pip /usr/local/bin/pip-original
+          cat > /usr/local/bin/pip << 'WRAPPER'
+          #!/bin/sh
+          # Skip pip self-upgrade
+          case "$*" in
+            *"install -U pip"*|*"install --upgrade pip"*)
+              echo "Skipping pip self-upgrade"
+              exit 0
+              ;;
+          esac
+          exec /usr/local/bin/pip-original "$@"
+          WRAPPER
+          chmod +x /usr/local/bin/pip
 
       - name: Build APK
         run: |
