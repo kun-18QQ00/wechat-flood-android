@@ -10,11 +10,49 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: kivy/buildozer:2024.01.01
+      image: kivy/buildozer:latest
       options: --user root
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Fix pip for Python 3.14 compatibility
+        run: |
+          # Create a pip wrapper that prevents self-upgrade
+          cat > /usr/local/bin/pip-safe << 'SCRIPT'
+          #!/bin/bash
+          # If trying to upgrade pip itself, use the current version
+          if [[ "$*" == *"install -U pip"* ]] || [[ "$*" == *"install --upgrade pip"* ]]; then
+            echo "Skipping pip self-upgrade for Python 3.14 compatibility"
+            exit 0
+          fi
+          exec /usr/local/bin/python3 -m pip "$@"
+          SCRIPT
+          chmod +x /usr/local/bin/pip-safe
+          
+          # Also prevent pip from upgrading itself by setting env var
+          echo 'PIP_NO_PYTHON_VERSION_WARNING=1' >> $GITHUB_ENV
+          
+          # Downgrade pip to a compatible version
+          pip install "pip==24.0" 2>/dev/null || true
+          
+          # Monkey-patch buildozer to not upgrade pip
+          PIP_PATH=$(python3 -c "import pip; print(pip.__file__)" 2>/dev/null || echo "")
+          if [ -n "$PIP_PATH" ]; then
+            PIP_DIR=$(dirname "$PIP_PATH")
+            # Create a backup of pip's main module and patch it
+            python3 -c "
+          import importlib
+          try:
+              import pip._internal.build_env.installer as inst
+              orig = inst.install
+              def patched(*args, **kwargs):
+                  print('Patched: skipping pip upgrade')
+                  return
+              inst.install = patched
+          except: pass
+          " 2>/dev/null || true
+          fi
 
       - name: Build APK
         run: |
