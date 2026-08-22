@@ -10,17 +10,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: kivy/buildozer:latest
+      image: kivy/buildozer:2024.01.01
       options: --user root
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Downgrade pip for Python 3.14 compatibility
-        run: |
-          pip install "pip==24.0"
-          # Also fix the venv pip that buildozer will create
-          python3 -c "import site; print(site.getusersitepackages())"
 
       - name: Build APK
         run: |
