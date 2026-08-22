@@ -31,11 +31,13 @@ jobs:
           pip install --upgrade "pip<23.3"
           pip install "buildozer<1.5" "cython<3.1"
 
-      - name: Clear old buildozer cache
+      - name: Accept Android licenses
         run: |
-          rm -rf ~/.buildozer
-          rm -rf .buildozer
-          rm -rf bin
+          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo -e "\ne6b7c2ab7fa2298c15165e9583d0222b24b9a170" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
 
       - name: Build APK (debug)
         run: |
