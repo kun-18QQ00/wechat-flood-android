@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#07c160">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>消息助手</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --bg: #f0f2f5; --card: #fff; --text: #1a1a1a; --sub: #666; --accent: #07c160; --danger: #fa5151; --warning: #ffc300; --border: #e5e5e5; }
+        [data-theme="dark"] { --bg: #1a1a2e; --card: #16213e; --text: #eee; --sub: #aaa; --border: #333; }
+        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 12px; padding-bottom: 80px; }
+        .header { text-align: center; padding: 16px 0; }
+        .header h1 { font-size: 22px; background: linear-gradient(135deg, #07c160, #10aeff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: var(--sub); font-size: 12px; margin-top: 4px; }
+        .card { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .card-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+        textarea { width: 100%; min-height: 100px; border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 14px; resize: vertical; background: var(--bg); color: var(--text); font-family: inherit; }
+        textarea:focus { outline: none; border-color: var(--accent); }
+        .btn-row { display: flex; gap: 6px; margin-top: 10px; }
+        .btn { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; }
+        .btn:active { transform: scale(0.95); }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .setting-row:last-child { border: none; }
+        input[type="range"] { -webkit-appearance: none; width: 100px; height: 4px; border-radius: 2px; background: var(--border); }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); }
+        .switch { position: relative; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--border); transition: .3s; border-radius: 24px; }
+        .slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        input[type="number"] { width: 55px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; text-align: center; background: var(--bg); color: var(--text); font-size: 13px; }
+        .status-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -1px 8px rgba(0,0,0,0.1); }
+        .status-text { font-size: 12px; color: var(--sub); }
+        .status-count { font-size: 18px; font-weight: 700; color: var(--accent); }
+        .control-row { display: flex; gap: 8px; margin-top: 12px; }
+        .control-btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .control-btn:active { transform: scale(0.96); }
+        .control-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        #btnStart { background: linear-gradient(135deg, #07c160, #06ad56); color: #fff; }
+        #btnPause { background: linear-gradient(135deg, #ffc300, #e6b000); color: #333; }
+        #btnStop { background: linear-gradient(135deg, #fa5151, #e04848); color: #fff; }
+        .log-area { background: #1e1e2e; color: #a6e3a1; border-radius: 10px; padding: 10px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; }
+        .log-time { color: #89b4fa; }
+        .log-error { color: #f38ba8; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--card); border-radius: 14px; padding: 16px; max-width: 340px; width: 100%; max-height: 70vh; overflow-y: auto; }
+        .preset-btn { display: block; width: 100%; padding: 10px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 13px; cursor: pointer; text-align: left; }
+        .theme-toggle { position: fixed; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; background: var(--card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; z-index: 50; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 300; opacity: 0; transition: opacity 0.3s; }
+        .toast.show { opacity: 1; }
+        @media (min-width: 480px) { body { max-width: 480px; margin: 0 auto; } }
+    </style>
+<!-- Updated: 2026-08-23 17:57:07 --></head>
+<body>
+    <div class="theme-toggle" onclick="toggleTheme()">🌙</div>
+    
+    <div class="header">
+        <h1>💬 消息助手</h1>
+        <p>快速复制 · 多种模式 · 简单易用</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-title">📝 消息内容</div>
+        <textarea id="msgInput" placeholder="输入消息，每行一条&#10;示例：&#10;你好&#10;在吗"></textarea>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="showPresets()">📦 预设</button>
+            <button class="btn btn-outline" onclick="loadHistory()">📚 历史</button>
+            <button class="btn btn-outline" onclick="document.getElementById('msgInput').value=''">🗑️ 清空</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-title">⚙️ 设置</div>
+        <div class="setting-row">
+            <span>发送模式</span>
+            <select id="modeSelect" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;">
+                <option value="sequence">顺序</option>
+                <option value="random">随机</option>
+                <option value="single">单条</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <span>发送间隔</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <input type="range" id="speedSlider" min="100" max="5000" value="1000" step="100" oninput="speedValue.textContent=this.value+'ms'">
+                <span id="speedValue" style="min-width:45px;text-align:right;font-size:12px;">1000ms</span>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span>发送数量</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <input type="number" id="batchInput" value="0" min="0">
+                <span style="font-size:11px;color:var(--sub)">0=无限</span>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span>振动反馈</span>
+            <label class="switch"><input type="checkbox" id="vibrateSwitch" checked><span class="slider"></span></label>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="control-row">
+            <button id="btnStart" class="control-btn" onclick="startSending()">▶ 开始</button>
+            <button id="btnPause" class="control-btn" onclick="togglePause()" disabled>⏸ 暂停</button>
+            <button id="btnStop" class="control-btn" onclick="stopSending()" disabled>⏹ 停止</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-title">📋 日志</div>
+        <div id="logArea" class="log-area"></div>
+        <button class="btn btn-outline" style="width:100%;margin-top:6px" onclick="document.getElementById('logArea').innerHTML=''">清空日志</button>
+    </div>
+    
+    <div class="status-bar">
+        <span id="statusText" class="status-text">⏸ 就绪</span>
+        <span id="countText" class="status-count">0</span>
+    </div>
+    
+    <div id="presetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">📦 预设消息</div>
+            <div id="presetList"></div>
+            <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'))">关闭</button>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+
+    <script>
+    let isRunning=false,isPaused=false,sentCount=0,currentIdx=0,lastSent='',messages=[];
+    const presets={'😀 表情刷屏':['😀','😂','🤣','😍','🥰','😎','🤩','😘','😋','🤔','👍','❤️','🔥','✨','🎉','💪'],'🔢 数字':Array.from({length:20},(_, i)=>`${i+1}`),'📝 测试':['测试1','测试2','测试3','测试4','测试5'],'🎊 祝福':['新年快乐！🎆','恭喜发财！🧧','万事如意！✨'],'👏 夸夸':['你太棒了！','厉害！','666！','牛！']};
+    let history=JSON.parse(localStorage.getItem('msgHistory')||'[]');
+    
+    function toggleTheme(){const d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');document.querySelector('.theme-toggle').textContent=d?'🌙':'☀️';localStorage.setItem('theme',d?'light':'dark');}
+    function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}
+    function addLog(m,type='info'){const l=document.getElementById('logArea');const t=new Date().toLocaleTimeString('zh-CN',{hour12:false});l.innerHTML+=`<div><span class="${type==='error'?'log-error':'log-time'}">[${t}]</span> ${m}</div>`;l.scrollTop=l.scrollHeight;}
+    
+    function showPresets(){const l=document.getElementById('presetList');l.innerHTML='';for(const[n,m]of Object.entries(presets)){const b=document.createElement('button');b.className='preset-btn';b.innerHTML=`<b>${n}</b><br><small style="color:var(--sub)">${m.length}条</small>`;b.onclick=()=>{document.getElementById('msgInput').value=m.join('\n');closeModal();showToast('已加载');};l.appendChild(b);}document.getElementById('presetModal').classList.add('active');}
+    function loadHistory(){const l=document.getElementById('presetList');l.innerHTML='';if(!history.length){l.innerHTML='<p style="text-align:center;padding:20px">暂无历史</p>';}else{history.slice(0,30).forEach(m=>{const b=document.createElement('button');b.className='preset-btn';b.textContent=m.length>25?m.substring(0,25)+'...':m;b.onclick=()=>{const i=document.getElementById('msgInput');i.value=i.value?i.value+'\n'+m:m;closeModal();};l.appendChild(b);});}document.getElementById('presetModal').classList.add('active');}
+    function closeModal(){document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));}
+    
+    function getMessages(){const i=document.getElementById('msgInput').value.trim();if(!i){showToast('请输入消息');return null;}const m=i.split('\n').filter(l=>l.trim());if(!m.length){showToast('消息不能为空');return null;}return m;}
+    
+    async function startSending(){
+        messages=getMessages();if(!messages)return;
+        messages.forEach(m=>{if(!history.includes(m))history.unshift(m);});history=history.slice(0,100);localStorage.setItem('msgHistory',JSON.stringify(history));
+        isRunning=true;isPaused=false;sentCount=0;currentIdx=0;lastSent='';
+        document.getElementById('btnStart').disabled=true;document.getElementById('btnPause').disabled=false;document.getElementById('btnStop').disabled=false;
+        document.getElementById('statusText').textContent='🟢 运行中...';
+        addLog(`🚀 开始 · ${messages.length}条 · 间隔${document.getElementById('speedSlider').value}ms`);
+        const batch=parseInt(document.getElementById('batchInput').value)||0;
+        
+        while(isRunning){
+            if(isPaused){await new Promise(r=>setTimeout(r,100));continue;}
+            const mode=document.getElementById('modeSelect').value;
+            let msg;
+            if(mode==='random'){msg=messages[Math.floor(Math.random()*messages.length)];}
+            else if(mode==='single'){msg=messages[0];}
+            else{msg=messages[currentIdx%messages.length];currentIdx++;}
+            lastSent=msg;
+            
+            try{
+                await navigator.clipboard.writeText(msg);
+                sentCount++;
+                document.getElementById('countText').textContent=sentCount;
+                addLog(`📤 #${sentCount} ${msg.length>12?msg.substring(0,12)+'...':msg}`);
+                if(document.getElementById('vibrateSwitch').checked&&navigator.vibrate)navigator.vibrate(50);
+            }catch(e){addLog(`❌ 复制失败: ${e.message}`,'error');break;}
+            if(batch>0&&sentCount>=batch){addLog(`🎯 达到${batch}条`);break;}
+            await new Promise(r=>setTimeout(r,parseInt(document.getElementById('speedSlider').value)));
+        }
+        stopSending();
+    }
+    
+    function togglePause(){
+        if(!isRunning)return;isPaused=!isPaused;
+        if(isPaused){document.getElementById('btnPause').textContent='▶ 恢复';document.getElementById('statusText').textContent='🟡 已暂停';addLog('⏸ 已暂停');}
+        else{document.getElementById('btnPause').textContent='⏸ 暂停';document.getElementById('statusText').textContent='🟢 运行中...';addLog('▶ 已恢复');}
+    }
+    
+    function stopSending(){
+        isRunning=false;isPaused=false;
+        document.getElementById('btnStart').disabled=false;document.getElementById('btnPause').disabled=true;
+        document.getElementById('btnPause').textContent='⏸ 暂停';document.getElementById('btnStop').disabled=true;
+        document.getElementById('statusText').textContent='⏸ 已停止';
+        if(sentCount>0){addLog(`✅ 结束，共${sentCount}条`);if(navigator.vibrate)navigator.vibrate([100,50,100]);}
+    }
+    
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+    </script>
+</body>
+</html>
