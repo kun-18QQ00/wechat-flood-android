@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  PYTHONFORANDROID_PREREQUISITES_INSTALL_INTERACTIVE: 0
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -18,68 +21,27 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential git python3-pip autoconf libtool pkg-config \
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
-            cmake libffi-dev libssl-dev automake zip unzip openjdk-17-jdk
+            cmake libffi-dev libssl-dev automake zip unzip
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade "pip<24"
-          pip install "buildozer<1.5" "cython<3.1"
+          pip install buildozer cython
 
-      - name: Accept Android SDK licenses
+      - name: Build APK (debug)
         run: |
-          mkdir -p ~/.android
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/android-sdk-license
-          echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.android/android-sdk-license
-
-      - name: Fix pip compatibility for buildozer venv
-        run: |
-          # Find the pip installer module and patch it to skip pip upgrade
-          INSTALLER_PATH=$(python3 -c "import pip._internal.build_env.installer; print(pip._internal.build_env.installer.__file__)")
-          echo "Patching: $INSTALLER_PATH"
-          
-          # Create a patched version that skips pip self-upgrade
-          python3 << 'PYEOF'
-          import pip._internal.build_env.installer as m
-          import os
-          
-          fpath = m.__file__
-          with open(fpath, 'r') as f:
-              content = f.read()
-          
-          # Add a guard to skip pip upgrades in the install function
-          old_func = "def install(requirements, target_dir, python_major_minor,"
-          new_func = """def install(requirements, target_dir, python_major_minor,
-              """
-          
-          # Simple patch: make install() return early for pip upgrades
-          if "SKIP_PIP_UPGRADE" not in content:
-              content = content.replace(
-                  "    for requirement in requirements:",
-                  """    # PATCHED: Skip pip self-upgrade
-        filtered = [r for r in requirements if 'pip' not in str(getattr(r, 'name', r)).lower()]
-        if not filtered:
-            return
-        requirements = filtered
-        for requirement in requirements:"""
-              )
-              with open(fpath, 'w') as f:
-                  f.write(content)
-              print(f"Patched {fpath}")
-          else:
-              print("Already patched")
-          PYEOF
-
-      - name: Build APK
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          yes | buildozer android debug
+          buildozer android debug
         timeout-minutes: 120
 
       - name: Upload APK
@@ -105,12 +67,13 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
-          name: "Î¢ÐÅË¢ÆÁÖúÊÖ v3.0"
+          name: "å¾®ä¿¡åˆ·å±åŠ©æ‰‹ ${{ github.ref_name }}"
           body: |
-            ## ?? ÏÂÔØ°²×°
-            ÏÂÔØ `.apk` ÎÄ¼þ£¬ÔÚ°²×¿ÊÖ»úÉÏ°²×°¼´¿ÉÊ¹ÓÃ¡£
-            ### ?? ×¢Òâ
-            - Ê×´Î°²×°ÐèÔÊÐí¡¸Î´ÖªÀ´Ô´¡¹Ó¦ÓÃ
+            ## ðŸ“² ä¸‹è½½å®‰è£…
+            ä¸‹è½½ `.apk` æ–‡ä»¶ï¼Œåœ¨å®‰å“æ‰‹æœºä¸Šå®‰è£…å³å¯ä½¿ç”¨ã€‚
+            ### âš ï¸ æ³¨æ„
+            - é¦–æ¬¡å®‰è£…éœ€å…è®¸ã€ŒæœªçŸ¥æ¥æºã€åº”ç”¨
+            - éœ€è¦å­˜å‚¨å’ŒæŒ¯åŠ¨æƒé™
           files: ./apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
