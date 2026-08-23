@@ -8,10 +8,11 @@ on:
 
 env:
   PYTHONFORANDROID_PREREQUISITES_INSTALL_INTERACTIVE: 0
+  PIP_BREAK_SYSTEM_PACKAGES: 1
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,10 +35,19 @@ jobs:
             build-essential git python3-pip autoconf libtool pkg-config \
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
             cmake libffi-dev libssl-dev automake zip unzip libltdl-dev
+          # Pin the system Python to 3.10 to avoid 3.14 issues
+          sudo apt-get install -y python3.10 python3.10-venv python3.10-dev || true
 
       - name: Install buildozer
         run: |
-          pip install buildozer cython
+          pip install "buildozer<2" "cython<3.1"
+
+      - name: Accept Android licenses
+        run: |
+          mkdir -p ~/.android
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/android-sdk-license
+          echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.android/android-sdk-license
 
       - name: Build APK (debug)
         run: |
@@ -53,7 +63,7 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
