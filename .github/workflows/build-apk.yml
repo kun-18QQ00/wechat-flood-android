@@ -39,9 +39,9 @@ jobs:
 
       - name: Patch pip to prevent self-upgrade
         run: |
-          SITE=$(python3 -c "import site; print(site.getsitepackages()[0])")
+          SITE=$(python3 -c 'import site; print(site.getsitepackages()[0])')
           mkdir -p $SITE/pip
-          python3 -c "
+          python3 << 'PYEOF'
           import os, site
           site_pkg = site.getsitepackages()[0]
           pip_init = os.path.join(site_pkg, 'pip', '__init__.py')
@@ -64,14 +64,17 @@ if _os.environ.get('SKIP_PIP_SELF_UPGRADE'):
               with open(pip_init, 'w') as f:
                   f.write(patch + content)
               print('Patched pip')
-          "
+          PYEOF
 
       - name: Accept Android licenses
         run: |
           mkdir -p ~/.android
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/android-sdk-license
-          echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.android/android-sdk-license
+          echo -e "
+24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/android-sdk-license
+          echo -e "
+d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
+          echo -e "
+84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.android/android-sdk-license
 
       - name: Build APK
         run: |
@@ -102,10 +105,10 @@ if _os.environ.get('SKIP_PIP_SELF_UPGRADE'):
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
-          name: "微信刷屏助手 ${{ github.ref_name }}"
+          name: "?????? ${{ github.ref_name }}"
           body: |
-            ## 📲 下载安装
-            下载 .apk 文件，在安卓手机上安装即可使用。
+            ## ?? ????
+            ?? .apk ????????????????
           files: ./apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
