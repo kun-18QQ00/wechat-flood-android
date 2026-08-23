@@ -12,7 +12,6 @@ android.minapi = 21
 android.ndk = 25c
 android.archs = arm64-v8a
 android.accept_sdk_license = True
-p4a.branch = develop
 fullscreen = 0
 orientation = portrait
 android.allow_backup = True
