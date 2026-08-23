@@ -1,5 +1,5 @@
 [app]
-title = ÏûÏ¢ÖúÊÖ
+title = MsgHelper
 package.name = msgsender
 package.domain = org.msg
 source.dir = .
