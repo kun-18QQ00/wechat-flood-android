@@ -35,12 +35,10 @@ jobs:
             build-essential git python3-pip autoconf libtool pkg-config \
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
             cmake libffi-dev libssl-dev automake zip unzip libltdl-dev
-          # Pin the system Python to 3.10 to avoid 3.14 issues
-          sudo apt-get install -y python3.10 python3.10-venv python3.10-dev || true
 
       - name: Install buildozer
         run: |
-          pip install "buildozer<2" "cython<3.1"
+          pip install "buildozer==1.5.0" "cython<3.1"
 
       - name: Accept Android licenses
         run: |
