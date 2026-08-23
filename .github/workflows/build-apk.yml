@@ -39,9 +39,9 @@ jobs:
 
       - name: Patch pip to prevent self-upgrade
         run: |
-          SITE=$(python3 -c 'import site; print(site.getsitepackages()[0])')
+          SITE=$(python3 -c "import site; print(site.getsitepackages()[0])")
           mkdir -p $SITE/pip
-          python3 << 'PYEOF'
+          python3 -c "
           import os, site
           site_pkg = site.getsitepackages()[0]
           pip_init = os.path.join(site_pkg, 'pip', '__init__.py')
@@ -64,7 +64,7 @@ if _os.environ.get('SKIP_PIP_SELF_UPGRADE'):
               with open(pip_init, 'w') as f:
                   f.write(patch + content)
               print('Patched pip')
-          PYEOF
+          "
 
       - name: Accept Android licenses
         run: |
@@ -104,11 +104,11 @@ d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          name: "?????? ${{ github.ref_name }}"
+          tag_name: \${{ github.ref }}
+          name: "WeChat Flood Helper \${{ github.ref_name }}"
           body: |
-            ## ?? ????
-            ?? .apk ????????????????
+            ## Download & Install
+            Download the .apk file and install on your Android phone.
           files: ./apk/*.apk
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
