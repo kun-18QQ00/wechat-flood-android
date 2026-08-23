@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,9 +27,63 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install dependencies
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git python3-pip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
+            cmake libffi-dev libssl-dev automake zip unzip libltdl-dev
+
+      - name: Install buildozer and patch pip
         run: |
           pip install "buildozer==1.4.0" "cython<3.1"
+          # Create a pip wrapper that prevents self-upgrade
+          cat > /usr/local/bin/pip-no-self-upgrade << 'EOF'
+          #!/bin/bash
+          # Check if this is a pip self-upgrade command
+          if [[ "$*" == *"install -U pip"* ]] || [[ "$*" == *"install --upgrade pip"* ]]; then
+            echo "Blocked pip self-upgrade to maintain compatibility"
+            exit 0
+          fi
+          exec /opt/hostedtoolcache/Python/3.11.16/x64/bin/pip "$@"
+          EOF
+          chmod +x /usr/local/bin/pip-no-self-upgrade
+          # Also create a Python wrapper that intercepts pip upgrades
+          python3 -c "
+          import site, os
+          # Patch pip to skip self-upgrade
+          pip_init = os.path.join(site.getsitepackages()[0], 'pip', '__init__.py')
+          with open(pip_init, 'r') as f:
+              content = f.read()
+          if 'SKIP_PIP_SELF_UPGRADE' not in content:
+              patch = '''
+import os as _os
+if _os.environ.get('SKIP_PIP_SELF_UPGRADE', ''):
+    import pip._internal.cli.main as _main
+    _orig_main = _main.main
+    def _patched_main():
+        import sys
+        # Filter out pip from upgrade commands
+        args = sys.argv[1:]
+        new_args = []
+        i = 0
+        while i < len(args):
+            if args[i] == 'install' and i+1 < len(args) and args[i+1] == '-U':
+                # Check if upgrading pip itself
+                if i+2 < len(args) and 'pip' in args[i+2].lower():
+                    print('Blocked pip self-upgrade')
+                    return 0
+            new_args.append(args[i])
+            i += 1
+        sys.argv[1:] = new_args
+        return _orig_main()
+    _main.main = _patched_main
+'''
+              with open(pip_init, 'w') as f:
+                  f.write(patch + content)
+              print('Patched pip to prevent self-upgrade')
+          "
 
       - name: Accept Android licenses
         run: |
@@ -40,6 +94,7 @@ jobs:
 
       - name: Build APK (debug)
         run: |
+          export SKIP_PIP_SELF_UPGRADE=1
           yes | buildozer android debug
         timeout-minutes: 120
 
@@ -52,7 +107,7 @@ jobs:
 
   release:
     needs: build
-    runs-on: macos-latest
+    runs-on: ubuntu-22.04
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
