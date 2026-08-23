@@ -1,4 +1,4 @@
-name: Build Android APK
+﻿name: Build Android APK
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 env:
   PYTHONFORANDROID_PREREQUISITES_INSTALL_INTERACTIVE: 0
+  SKIP_PIP_SELF_UPGRADE: 1
 
 jobs:
   build:
@@ -30,59 +31,39 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential git python3-pip autoconf libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
-            cmake libffi-dev libssl-dev automake zip unzip libltdl-dev
+          sudo apt-get install -y build-essential git python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev automake zip unzip libltdl-dev
 
-      - name: Install buildozer and patch pip
+      - name: Install buildozer
         run: |
-          pip install "buildozer==1.4.0" "cython<3.1"
-          # Create a pip wrapper that prevents self-upgrade
-          cat > /usr/local/bin/pip-no-self-upgrade << 'EOF'
-          #!/bin/bash
-          # Check if this is a pip self-upgrade command
-          if [[ "$*" == *"install -U pip"* ]] || [[ "$*" == *"install --upgrade pip"* ]]; then
-            echo "Blocked pip self-upgrade to maintain compatibility"
-            exit 0
-          fi
-          exec /opt/hostedtoolcache/Python/3.11.16/x64/bin/pip "$@"
-          EOF
-          chmod +x /usr/local/bin/pip-no-self-upgrade
-          # Also create a Python wrapper that intercepts pip upgrades
+          pip install buildozer cython
+
+      - name: Patch pip to prevent self-upgrade
+        run: |
+          SITE=$(python3 -c "import site; print(site.getsitepackages()[0])")
+          mkdir -p $SITE/pip
           python3 -c "
-          import site, os
-          # Patch pip to skip self-upgrade
-          pip_init = os.path.join(site.getsitepackages()[0], 'pip', '__init__.py')
+          import os, site
+          site_pkg = site.getsitepackages()[0]
+          pip_init = os.path.join(site_pkg, 'pip', '__init__.py')
           with open(pip_init, 'r') as f:
               content = f.read()
           if 'SKIP_PIP_SELF_UPGRADE' not in content:
-              patch = '''
-import os as _os
-if _os.environ.get('SKIP_PIP_SELF_UPGRADE', ''):
+              patch = '''import os as _os
+if _os.environ.get('SKIP_PIP_SELF_UPGRADE'):
     import pip._internal.cli.main as _main
-    _orig_main = _main.main
-    def _patched_main():
+    _orig = _main.main
+    def _patched():
         import sys
-        # Filter out pip from upgrade commands
         args = sys.argv[1:]
-        new_args = []
-        i = 0
-        while i < len(args):
-            if args[i] == 'install' and i+1 < len(args) and args[i+1] == '-U':
-                # Check if upgrading pip itself
-                if i+2 < len(args) and 'pip' in args[i+2].lower():
-                    print('Blocked pip self-upgrade')
-                    return 0
-            new_args.append(args[i])
-            i += 1
-        sys.argv[1:] = new_args
-        return _orig_main()
-    _main.main = _patched_main
+        if len(args) >= 3 and args[0] == 'install' and args[1] == '-U' and 'pip' in args[2]:
+            print('Blocked pip self-upgrade')
+            return 0
+        return _orig()
+    _main.main = _patched
 '''
               with open(pip_init, 'w') as f:
                   f.write(patch + content)
-              print('Patched pip to prevent self-upgrade')
+              print('Patched pip')
           "
 
       - name: Accept Android licenses
@@ -92,9 +73,8 @@ if _os.environ.get('SKIP_PIP_SELF_UPGRADE', ''):
           echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
           echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.android/android-sdk-license
 
-      - name: Build APK (debug)
+      - name: Build APK
         run: |
-          export SKIP_PIP_SELF_UPGRADE=1
           yes | buildozer android debug
         timeout-minutes: 120
 
@@ -125,10 +105,7 @@ if _os.environ.get('SKIP_PIP_SELF_UPGRADE', ''):
           name: "微信刷屏助手 ${{ github.ref_name }}"
           body: |
             ## 📲 下载安装
-            下载 `.apk` 文件，在安卓手机上安装即可使用。
-            ### ⚠️ 注意
-            - 首次安装需允许「未知来源」应用
-            - 需要存储和振动权限
+            下载 .apk 文件，在安卓手机上安装即可使用。
           files: ./apk/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
