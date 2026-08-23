@@ -22,7 +22,7 @@ jobs:
           python-version: '3.10'
 
       - name: Set up Java 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-python@v5
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -46,52 +46,8 @@ jobs:
           echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
           echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> ~/.android/android-sdk-license
 
-      - name: Patch pip to prevent self-upgrade
-        run: |
-          # Create a wrapper that prevents pip from upgrading itself
-          SITE-packages=$(python3 -c "import site; print(site.getsitepackages()[0])")
-          PIP_PATH="$SITE-packages/pip/__init__.py"
-          # Add a monkey-patch to prevent self-upgrade
-          python3 -c "
-          import os
-          site_pkg = '$(python3 -c \"import site; print(site.getsitepackages()[0])\")'
-          pip_init = os.path.join(site_pkg, 'pip', '__init__.py')
-          with open(pip_init, 'r') as f:
-              content = f.read()
-          if 'SKIP_PIP_SELF_UPGRADE' not in content:
-              patch = '''
-import os as _os
-if _os.environ.get('SKIP_PIP_SELF_UPGRADE'):
-    import pip._internal.cli.main as _main
-    _orig_main = _main.main
-    def _patched_main(*args, **kwargs):
-        import sys
-        # Remove -U/--upgrade flags when upgrading pip itself
-        new_args = []
-        skip_next = False
-        for arg in sys.argv[1:]:
-            if skip_next:
-                skip_next = False
-                continue
-            if arg in ('-U', '--upgrade'):
-                continue
-            if arg == 'pip' and '--upgrade' in sys.argv:
-                continue
-            new_args.append(arg)
-        sys.argv[1:] = new_args
-        return _orig_main(*args, **kwargs)
-    _main.main = _patched_main
-'''
-              with open(pip_init, 'w') as f:
-                  f.write(patch + content)
-              print('Patched pip to prevent self-upgrade')
-          else:
-              print('Already patched')
-          "
-
       - name: Build APK (debug)
         run: |
-          export SKIP_PIP_SELF_UPGRADE=1
           yes | buildozer android debug
         timeout-minutes: 120
 
