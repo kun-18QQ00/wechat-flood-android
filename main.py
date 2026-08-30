@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
@@ -7,11 +8,19 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
 from kivy.uix.spinner import Spinner
 from kivy.uix.slider import Slider
-from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
+from kivy.core.text import LabelBase
 import threading
 import time
 import random
+
+# 注册中文字体
+FONT_PATH = os.path.join(os.path.dirname(__file__), 'fonts', 'chinese.ttf')
+if os.path.exists(FONT_PATH):
+    LabelBase.register(name='Chinese', fn_regular=FONT_PATH)
+    FONT_NAME = 'Chinese'
+else:
+    FONT_NAME = 'Roboto'
 
 class MsgApp(App):
     def build(self):
@@ -28,6 +37,7 @@ class MsgApp(App):
             text="[b]消息助手 v3.0[/b]",
             markup=True,
             font_size=24,
+            font_name=FONT_NAME,
             size_hint_y=None,
             height=40,
             color=(0.07, 0.75, 0.38, 1)
@@ -40,6 +50,7 @@ class MsgApp(App):
             multiline=True,
             size_hint_y=0.35,
             font_size=16,
+            font_name=FONT_NAME,
             padding=[10, 10]
         )
         root.add_widget(self.msg_input)
@@ -51,7 +62,7 @@ class MsgApp(App):
             ("数字", [str(i) for i in range(1, 21)]),
             ("测试", ["测试消息1","测试消息2","测试消息3","测试消息4","测试消息5"])
         ]:
-            btn = Button(text=name, font_size=14, background_color=(0.07, 0.75, 0.38, 1))
+            btn = Button(text=name, font_size=14, font_name=FONT_NAME, background_color=(0.07, 0.75, 0.38, 1))
             btn.bind(on_press=lambda x, m=msgs: self.load_preset(m))
             preset_layout.add_widget(btn)
         root.add_widget(preset_layout)
@@ -59,18 +70,19 @@ class MsgApp(App):
         # 设置行
         settings = BoxLayout(size_hint_y=None, height=45, spacing=10)
         
-        settings.add_widget(Label(text="模式:", font_size=14, size_hint_x=0.15))
+        settings.add_widget(Label(text="模式:", font_size=14, font_name=FONT_NAME, size_hint_x=0.15))
         self.mode_spinner = Spinner(
             text='顺序',
             values=('顺序', '随机', '单条'),
-            size_hint_x=0.25
+            size_hint_x=0.25,
+            font_name=FONT_NAME
         )
         settings.add_widget(self.mode_spinner)
         
-        settings.add_widget(Label(text="间隔:", font_size=14, size_hint_x=0.12))
+        settings.add_widget(Label(text="间隔:", font_size=14, font_name=FONT_NAME, size_hint_x=0.12))
         self.speed_slider = Slider(min=0.1, max=5.0, value=1.0, step=0.1, size_hint_x=0.3)
         settings.add_widget(self.speed_slider)
-        self.speed_label = Label(text="1.0s", font_size=12, size_hint_x=0.13)
+        self.speed_label = Label(text="1.0秒", font_size=12, font_name=FONT_NAME, size_hint_x=0.13)
         settings.add_widget(self.speed_label)
         
         root.add_widget(settings)
@@ -81,6 +93,7 @@ class MsgApp(App):
         self.start_btn = Button(
             text="▶ 开始",
             font_size=18,
+            font_name=FONT_NAME,
             background_color=(0.07, 0.75, 0.38, 1),
             color=(1, 1, 1, 1)
         )
@@ -89,6 +102,7 @@ class MsgApp(App):
         self.pause_btn = Button(
             text="⏸ 暂停",
             font_size=18,
+            font_name=FONT_NAME,
             background_color=(0.95, 0.61, 0.07, 1),
             disabled=True
         )
@@ -97,6 +111,7 @@ class MsgApp(App):
         self.stop_btn = Button(
             text="⏹ 停止",
             font_size=18,
+            font_name=FONT_NAME,
             background_color=(0.91, 0.30, 0.24, 1),
             disabled=True
         )
@@ -109,14 +124,14 @@ class MsgApp(App):
         
         # 状态栏
         status_layout = BoxLayout(size_hint_y=None, height=30)
-        self.status_label = Label(text="就绪", font_size=14, color=(0.5, 0.5, 0.5, 1))
-        self.count_label = Label(text="0", font_size=18, bold=True, color=(0.07, 0.75, 0.38, 1))
+        self.status_label = Label(text="就绪", font_size=14, font_name=FONT_NAME, color=(0.5, 0.5, 0.5, 1))
+        self.count_label = Label(text="0", font_size=18, font_name=FONT_NAME, bold=True, color=(0.07, 0.75, 0.38, 1))
         status_layout.add_widget(self.status_label)
         status_layout.add_widget(self.count_label)
         root.add_widget(status_layout)
         
         # 日志区域
-        log_label = Label(text="运行日志", font_size=14, size_hint_y=None, height=25, halign='left')
+        log_label = Label(text="运行日志", font_size=14, font_name=FONT_NAME, size_hint_y=None, height=25, halign='left')
         root.add_widget(log_label)
         
         self.log_area = TextInput(
@@ -124,6 +139,7 @@ class MsgApp(App):
             background_color=(0.12, 0.12, 0.18, 1),
             foreground_color=(0.65, 0.89, 0.63, 1),
             font_size=12,
+            font_name=FONT_NAME,
             size_hint_y=0.25
         )
         root.add_widget(self.log_area)
@@ -165,7 +181,6 @@ class MsgApp(App):
         
         self.log(f"开始发送 {len(self.messages)} 条消息")
         
-        # 启动发送线程
         self.send_thread = threading.Thread(target=self._send_loop, daemon=True)
         self.send_thread.start()
     
@@ -178,7 +193,6 @@ class MsgApp(App):
                 time.sleep(0.1)
                 continue
             
-            # 选择消息
             if mode == "随机":
                 msg = random.choice(self.messages)
             elif mode == "单条":
@@ -188,7 +202,6 @@ class MsgApp(App):
                 self.current_idx += 1
             
             try:
-                # 复制到剪贴板
                 from kivy.core.clipboard import Clipboard
                 Clipboard.copy(msg)
                 self.sent_count += 1
@@ -200,7 +213,6 @@ class MsgApp(App):
                 Clock.schedule_once(lambda dt, err=str(e): self.log(f"错误: {err}"))
                 break
             
-            # 间隔等待
             time.sleep(interval)
         
         Clock.schedule_once(lambda dt: self._on_send_end())

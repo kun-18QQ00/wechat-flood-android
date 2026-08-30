@@ -1,9 +1,10 @@
 [app]
-title = MsgHelper
+title = 消息助手
 package.name = msgsender
 package.domain = org.msg
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,json
+source.include_exts = py,png,jpg,kv,atlas,json,ttf,otf
+source.include_patterns = fonts/*
 version = 1.0.0
 requirements = python3,kivy
 android.permissions = INTERNET
