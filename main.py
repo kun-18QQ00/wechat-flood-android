@@ -20,6 +20,14 @@ from kivy.core.text import LabelBase
 from kivy.core.window import Window
 from kivy.graphics import Color, RoundedRectangle
 
+# Android imports
+try:
+    from jnius import autoclass, cast
+    from android.runnable import run_on_ui_thread
+    ANDROID = True
+except:
+    ANDROID = False
+
 # 注册中文字体
 FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'chinese.ttf')
 if os.path.exists(FONT_PATH):
@@ -62,6 +70,7 @@ class MsgApp(App):
         self.sent_count = 0
         self.current_idx = 0
         self.history = self._load_history()
+        self.auto_send_service = None
 
         root = ScrollView(do_scroll_x=False)
         content = BoxLayout(orientation='vertical', padding=16, spacing=12, size_hint_y=None)
@@ -70,6 +79,16 @@ class MsgApp(App):
         # 标题
         title = Label(text="[b]消息助手[/b]", markup=True, font_size=22, font_name=FONT, color=C_PRIMARY, size_hint_y=None, height=40)
         content.add_widget(title)
+
+        # 无障碍服务状态
+        self.service_status = Label(text="⚠️ 无障碍服务未开启", font_size=12, font_name=FONT, color=C_WARNING, size_hint_y=None, height=30)
+        content.add_widget(self.service_status)
+        
+        # 开启无障碍服务按钮
+        btn_accessibility = Button(text="🔧 开启无障碍服务", font_size=14, font_name=FONT, 
+                                   background_color=C_INFO, color=(1,1,1,1), size_hint_y=None, height=40)
+        btn_accessibility.bind(on_press=self._open_accessibility)
+        content.add_widget(btn_accessibility)
 
         # 消息输入卡片
         card1 = CardBox(size_hint_y=None, height=220)
@@ -84,6 +103,16 @@ class MsgApp(App):
         card1.add_widget(btn_row)
         content.add_widget(card1)
 
+        # 目标应用卡片
+        card_target = CardBox(size_hint_y=None, height=100)
+        card_target.add_widget(Label(text="🎯 目标应用", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
+        row_target = BoxLayout(size_hint_y=None, height=36)
+        row_target.add_widget(Label(text="应用", font_size=13, font_name=FONT, color=C_TEXT_SUB, size_hint_x=0.3))
+        self.app_sp = Spinner(text='微信', values=('微信','QQ','钉钉','飞书','Telegram','WhatsApp'), font_size=13, font_name=FONT, size_hint_x=0.7)
+        row_target.add_widget(self.app_sp)
+        card_target.add_widget(row_target)
+        content.add_widget(card_target)
+
         # 设置卡片
         card2 = CardBox(size_hint_y=None, height=200)
         card2.add_widget(Label(text="⚙️ 设置", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
@@ -96,8 +125,8 @@ class MsgApp(App):
         # 间隔
         row2 = BoxLayout(size_hint_y=None, height=36)
         row2.add_widget(Label(text="间隔", font_size=13, font_name=FONT, color=C_TEXT_SUB, size_hint_x=0.3))
-        self.speed_sl = Slider(min=0.3, max=5.0, value=1.0, step=0.1, size_hint_x=0.5)
-        self.speed_lbl = Label(text="1.0s", font_size=13, font_name=FONT, color=C_TEXT, size_hint_x=0.2)
+        self.speed_sl = Slider(min=0.5, max=5.0, value=1.5, step=0.1, size_hint_x=0.5)
+        self.speed_lbl = Label(text="1.5s", font_size=13, font_name=FONT, color=C_TEXT, size_hint_x=0.2)
         self.speed_sl.bind(value=lambda i,v: setattr(self.speed_lbl, 'text', f"{v:.1f}s"))
         row2.add_widget(self.speed_sl)
         row2.add_widget(self.speed_lbl)
@@ -110,12 +139,13 @@ class MsgApp(App):
         card2.add_widget(row3)
         content.add_widget(card2)
 
-        # 控制按钮
+        # 控制卡片
         card3 = CardBox(size_hint_y=None, height=70)
-        btn_row2 = GridLayout(cols=3, size_hint_y=None, height=48, spacing=8)
-        self.btn_start = Button(text="▶ 开始", font_size=15, font_name=FONT, background_color=C_PRIMARY, color=(1,1,1,1))
-        self.btn_pause = Button(text="⏸ 暂停", font_size=15, font_name=FONT, background_color=C_WARNING, color=C_TEXT, disabled=True)
-        self.btn_stop = Button(text="⏹ 停止", font_size=15, font_name=FONT, background_color=C_DANGER, color=(1,1,1,1), disabled=True)
+        card3.add_widget(Label(text="🎮 控制", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
+        btn_row2 = GridLayout(cols=3, size_hint_y=None, height=40, spacing=8)
+        self.btn_start = Button(text="▶ 开始", font_size=14, font_name=FONT, background_color=C_PRIMARY, color=(1,1,1,1))
+        self.btn_pause = Button(text="⏸ 暂停", font_size=14, font_name=FONT, background_color=C_WARNING, color=(1,1,1,1), disabled=True)
+        self.btn_stop = Button(text="⏹ 停止", font_size=14, font_name=FONT, background_color=C_DANGER, color=(1,1,1,1), disabled=True)
         self.btn_start.bind(on_press=self._start)
         self.btn_pause.bind(on_press=self._pause)
         self.btn_stop.bind(on_press=self._stop)
@@ -125,8 +155,9 @@ class MsgApp(App):
         card3.add_widget(btn_row2)
         content.add_widget(card3)
 
-        # 状态栏
-        card4 = CardBox(size_hint_y=None, height=40)
+        # 状态卡片
+        card4 = CardBox(size_hint_y=None, height=60)
+        card4.add_widget(Label(text="📊 状态", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=20))
         status_row = BoxLayout()
         self.status_lbl = Label(text="就绪", font_size=13, font_name=FONT, color=C_TEXT_SUB)
         self.count_lbl = Label(text="0", font_size=18, font_name=FONT, bold=True, color=C_PRIMARY)
@@ -143,7 +174,58 @@ class MsgApp(App):
         content.add_widget(card5)
 
         root.add_widget(content)
+        
+        # 检查无障碍服务状态
+        Clock.schedule_once(lambda dt: self._check_service(), 1)
+        
         return root
+
+    def _check_service(self):
+        """检查无障碍服务状态"""
+        if ANDROID:
+            try:
+                AutoSendService = autoclass('com.wechat.flood.AutoSendService')
+                service = AutoSendService.getInstance()
+                if service and service.isServiceReady():
+                    self.service_status.text = "✅ 无障碍服务已开启"
+                    self.service_status.color = C_PRIMARY
+                    self.auto_send_service = service
+                else:
+                    self.service_status.text = "⚠️ 无障碍服务未开启"
+                    self.service_status.color = C_WARNING
+            except:
+                self.service_status.text = "⚠️ 无障碍服务未开启"
+                self.service_status.color = C_WARNING
+        else:
+            self.service_status.text = "⚠️ 仅支持Android设备"
+            self.service_status.color = C_WARNING
+
+    def _open_accessibility(self, *args):
+        """打开无障碍设置"""
+        if ANDROID:
+            try:
+                PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                Intent = autoclass('android.content.Intent')
+                Settings = autoclass('android.provider.Settings')
+                intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                PythonActivity.mActivity.startActivity(intent)
+                self._log("请开启「消息助手」无障碍服务")
+            except Exception as e:
+                self._log(f"打开设置失败: {e}")
+        else:
+            self._log("仅支持Android设备")
+
+    def _get_app_package(self):
+        """获取应用包名"""
+        app_map = {
+            '微信': 'com.tencent.mm',
+            'QQ': 'com.tencent.mobileqq',
+            '钉钉': 'com.alibaba.android.rimet',
+            '飞书': 'com.ss.android.lark',
+            'Telegram': 'org.telegram.messenger',
+            'WhatsApp': 'com.whatsapp'
+        }
+        return app_map.get(self.app_sp.text, 'com.tencent.mm')
 
     def _log(self, msg):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -180,6 +262,12 @@ class MsgApp(App):
         if not msgs:
             self.status_lbl.text = "消息为空"
             return
+        
+        # 检查无障碍服务
+        if ANDROID and not self.auto_send_service:
+            self._log("请先开启无障碍服务")
+            return
+        
         self.messages = msgs
         self.is_running = True
         self.is_paused = False
@@ -189,17 +277,30 @@ class MsgApp(App):
         self.btn_pause.disabled = False
         self.btn_stop.disabled = False
         self.status_lbl.text = "运行中..."
-        self._log(f"开始 {len(msgs)} 条")
-        threading.Thread(target=self._loop, daemon=True).start()
+        self._log(f"开始 {len(msgs)} 条消息")
+        
+        # 启动自动发送
+        if ANDROID and self.auto_send_service:
+            package = self._get_app_package()
+            batch = int(self.batch_input.text or 0) or 999999
+            self.auto_send_service.setBatchMode(batch)
+            self._log(f"目标: {self.app_sp.text}")
+            threading.Thread(target=self._auto_send_loop, daemon=True).start()
+        else:
+            # 非Android环境使用剪贴板模式
+            threading.Thread(target=self._clipboard_loop, daemon=True).start()
 
-    def _loop(self):
+    def _auto_send_loop(self):
+        """自动发送循环"""
         mode = self.mode_sp.text
         interval = self.speed_sl.value
-        batch = int(self.batch_input.text or 0) or 999999
-        while self.is_running and self.sent_count < batch:
+        package = self._get_app_package()
+        
+        while self.is_running:
             if self.is_paused:
                 time.sleep(0.1)
                 continue
+            
             if mode == "随机":
                 msg = random.choice(self.messages)
             elif mode == "单条":
@@ -207,6 +308,45 @@ class MsgApp(App):
             else:
                 msg = self.messages[self.current_idx % len(self.messages)]
                 self.current_idx += 1
+            
+            try:
+                self.auto_send_service.sendMessage(msg, package, 1, 300)
+                self.sent_count += 1
+                d = msg[:12] + "..." if len(msg) > 12 else msg
+                Clock.schedule_once(lambda dt, m=d: self._log(f"#{self.sent_count} {m}"))
+                Clock.schedule_once(lambda dt: setattr(self.count_lbl, 'text', str(self.sent_count)))
+                
+                # 检查批量限制
+                batch = int(self.batch_input.text or 0) or 999999
+                if self.sent_count >= batch:
+                    break
+            except Exception as e:
+                Clock.schedule_once(lambda dt, err=str(e): self._log(f"错误: {err}"))
+                break
+            
+            time.sleep(interval)
+        
+        Clock.schedule_once(lambda dt: self._end())
+
+    def _clipboard_loop(self):
+        """剪贴板模式循环（非Android环境）"""
+        mode = self.mode_sp.text
+        interval = self.speed_sl.value
+        batch = int(self.batch_input.text or 0) or 999999
+        
+        while self.is_running and self.sent_count < batch:
+            if self.is_paused:
+                time.sleep(0.1)
+                continue
+            
+            if mode == "随机":
+                msg = random.choice(self.messages)
+            elif mode == "单条":
+                msg = self.messages[0]
+            else:
+                msg = self.messages[self.current_idx % len(self.messages)]
+                self.current_idx += 1
+            
             try:
                 from kivy.core.clipboard import Clipboard
                 Clipboard.copy(msg)
@@ -217,7 +357,9 @@ class MsgApp(App):
             except Exception as e:
                 Clock.schedule_once(lambda dt, err=str(e): self._log(f"错误: {err}"))
                 break
+            
             time.sleep(interval)
+        
         Clock.schedule_once(lambda dt: self._end())
 
     def _end(self):
@@ -247,6 +389,8 @@ class MsgApp(App):
         if not self.is_running: return
         self.is_running = False
         self.is_paused = False
+        if self.auto_send_service:
+            self.auto_send_service.stopSending()
         self._log("正在停止...")
 
 if __name__ == "__main__":
