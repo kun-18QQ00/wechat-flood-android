@@ -85,11 +85,11 @@ class MsgApp(App):
         content.add_widget(title)
 
         # 无障碍服务状态
-        self.service_status = Label(text="[!] 无障碍服务未开启", font_size=12, font_name=FONT, color=C_WARNING, size_hint_y=None, height=30)
+        self.service_status = Label(text="无障碍服务未开启", font_size=12, font_name=FONT, color=C_WARNING, size_hint_y=None, height=30)
         content.add_widget(self.service_status)
         
         # 开启无障碍服务按钮
-        btn_accessibility = Button(text="[开启] 无障碍服务", font_size=14, font_name=FONT, 
+        btn_accessibility = Button(text="开启无障碍服务", font_size=14, font_name=FONT, 
                                    background_color=C_INFO, color=(1,1,1,1), size_hint_y=None, height=40)
         btn_accessibility.bind(on_press=self._open_accessibility)
         content.add_widget(btn_accessibility)
@@ -191,17 +191,17 @@ class MsgApp(App):
                 AutoSendService = autoclass('com.wechat.flood.AutoSendService')
                 service = AutoSendService.getInstance()
                 if service and service.isServiceReady():
-                    self.service_status.text = "[OK] 无障碍服务已开启"
+                    self.service_status.text = "无障碍服务已开启"
                     self.service_status.color = C_PRIMARY
                     self.auto_send_service = service
                 else:
-                    self.service_status.text = "[!] 无障碍服务未开启"
+                    self.service_status.text = "无障碍服务未开启"
                     self.service_status.color = C_WARNING
             except:
-                self.service_status.text = "[!] 无障碍服务未开启"
+                self.service_status.text = "无障碍服务未开启"
                 self.service_status.color = C_WARNING
         else:
-            self.service_status.text = "[!] 仅支持Android设备"
+            self.service_status.text = "仅支持Android设备"
             self.service_status.color = C_WARNING
 
     def _open_accessibility(self, *args):
@@ -251,7 +251,7 @@ class MsgApp(App):
 
     def _preset(self, kind):
         if kind == "emoji":
-            self.msg_input.text = "hello\nhi\nhey\nok\nnice\ngood\nyes\nno\nthanks\nsorry"
+            self.msg_input.text = "😀\n😂\n🤣\n😍\n🥰\n😎\n🤩\n😘\n😋\n🤔\n👍\n❤️\n🔥\n✨\n🎉"
         elif kind == "num":
             self.msg_input.text = "\n".join(str(i) for i in range(1,21))
         self._log("已加载预设")
