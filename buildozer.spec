@@ -3,11 +3,11 @@ title = 消息助手
 package.name = msgsender
 package.domain = org.msg
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,json,ttf,otf
-source.include_patterns = fonts/*
-version = 1.0.0
-requirements = python3,kivy
-android.permissions = INTERNET
+source.include_exts = py,png,jpg,kv,atlas,json,ttf,otf,xml
+source.include_patterns = fonts/*,res/xml/*,src/**/*.java
+version = 2.0.0
+requirements = python3,kivy,pyjnius
+android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,BIND_ACCESSIBILITY_SERVICE
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
@@ -17,6 +17,7 @@ orientation = portrait
 fullscreen = 0
 android.allow_backup = True
 log_level = 2
+android.manifest.custom_enabled = true
 
 [buildozer]
 warn_on_root = 0
