@@ -22,7 +22,7 @@ from kivy.core.window import Window
 from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.utils import get_color_from_hex
 from kivy.animation import Animation
-from kivy.properties import ListProperty, StringProperty
+from kivy.properties import ListProperty, StringProperty, NumericProperty
 
 # Android imports
 try:
@@ -44,76 +44,76 @@ if os.path.exists(FONT_PATH):
 else:
     FONT = 'Roboto'
 
-# 柔光玻璃彩色主题
-C_BG_GRADIENT_START = get_color_from_hex('#667eea')
-C_BG_GRADIENT_END = get_color_from_hex('#764ba2')
+# iOS风格颜色主题
+C_BG_GRADIENT_START = get_color_from_hex('#F2F2F7')  # iOS浅灰背景
+C_BG_GRADIENT_END = get_color_from_hex('#E5E5EA')
 
-# 卡片颜色（半透明）
-C_CARD_1 = (1, 1, 1, 0.85)
-C_CARD_2 = (0.95, 0.95, 1, 0.8)
-C_CARD_3 = (0.9, 1, 0.95, 0.8)
-C_CARD_4 = (1, 0.95, 0.9, 0.8)
-C_CARD_5 = (0.95, 0.9, 1, 0.8)  # 新增：粉色卡片
+# iOS系统颜色
+C_IOS_BLUE = get_color_from_hex('#007AFF')
+C_IOS_GREEN = get_color_from_hex('#34C759')
+C_IOS_RED = get_color_from_hex('#FF3B30')
+C_IOS_ORANGE = get_color_from_hex('#FF9500')
+C_IOS_YELLOW = get_color_from_hex('#FFCC00')
+C_IOS_PURPLE = get_color_from_hex('#AF52DE')
+C_IOS_PINK = get_color_from_hex('#FF2D55')
+C_IOS_TEAL = get_color_from_hex('#5AC8FA')
+C_IOS_INDIGO = get_color_from_hex('#5856D6')
 
-# 按钮颜色
-C_PRIMARY = get_color_from_hex('#4facfe')
-C_PRIMARY_GRADIENT = get_color_from_hex('#00f2fe')
-C_SUCCESS = get_color_from_hex('#43e97b')
-C_SUCCESS_GRADIENT = get_color_from_hex('#38f9d7')
-C_WARNING = get_color_from_hex('#fa709a')
-C_WARNING_GRADIENT = get_color_from_hex('#fee140')
-C_DANGER = get_color_from_hex('#ff6b6b')
-C_DANGER_GRADIENT = get_color_from_hex('#ffa500')
-C_INFO = get_color_from_hex('#a18cd1')
-C_INFO_GRADIENT = get_color_from_hex('#fbc2eb')
+# 卡片颜色
+C_CARD = (1, 1, 1, 0.95)
+C_CARD_GROUPED = (1, 1, 1, 0.9)
 
 # 文字颜色
-C_TEXT = (0.2, 0.2, 0.3, 1)
-C_TEXT_SUB = (0.4, 0.4, 0.5, 1)
+C_TEXT = (0.1, 0.1, 0.1, 1)
+C_TEXT_SECONDARY = (0.4, 0.4, 0.4, 1)
+C_TEXT_TERTIARY = (0.6, 0.6, 0.6, 1)
 C_TEXT_WHITE = (1, 1, 1, 1)
 
-class AnimatedCard(BoxLayout):
-    """带动画的柔光玻璃卡片"""
-    def __init__(self, card_color=C_CARD_1, **kwargs):
+class IOSCard(BoxLayout):
+    """iOS风格卡片"""
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
-        self.padding = [16, 12, 16, 12]
-        self.spacing = 8
-        self.card_color = card_color
-        self.opacity = 0  # 初始透明
+        self.padding = [16, 14, 16, 14]
+        self.spacing = 10
+        self.opacity = 0
+        self.scale = 0.95
         
         with self.canvas.before:
-            Color(0, 0, 0, 0.1)
-            self._shadow = RoundedRectangle(pos=(self.x+2, self.y-2), size=self.size, radius=[16])
-            Color(*card_color)
-            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[16])
+            # 阴影
+            Color(0, 0, 0, 0.05)
+            self._shadow = RoundedRectangle(pos=(self.x+1, self.y-1), size=self.size, radius=[12])
+            # 背景
+            Color(*C_CARD)
+            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[12])
         self.bind(pos=self._update, size=self._update)
         
-        # 入场动画
-        Clock.schedule_once(self._animate_in, 0.1)
+        # iOS风格入场动画
+        Clock.schedule_once(self._animate_in, 0.05)
     
     def _update(self, *a):
-        self._shadow.pos = (self.x+2, self.y-2)
+        self._shadow.pos = (self.x+1, self.y-1)
         self._shadow.size = self.size
         self._bg.pos = self.pos
         self._bg.size = self.size
     
     def _animate_in(self, dt):
-        anim = Animation(opacity=1, duration=0.3)
+        # iOS风格弹簧动画
+        anim = Animation(opacity=1, scale=1, duration=0.4, t='out_back')
         anim.start(self)
 
-class PulsingButton(Button):
-    """带脉冲效果的按钮"""
-    def __init__(self, color_start, color_end, **kwargs):
+class IOSButton(Button):
+    """iOS风格按钮"""
+    def __init__(self, color=C_IOS_BLUE, **kwargs):
         super().__init__(**kwargs)
-        self.color_start = color_start
-        self.color_end = color_end
+        self.color = color
         self.background_color = (0, 0, 0, 0)
         self.color = C_TEXT_WHITE
+        self.bold = True
         
         with self.canvas.before:
-            Color(*color_start)
-            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[12])
+            Color(*color)
+            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[10])
         self.bind(pos=self._update_bg, size=self._update_bg)
         self.bind(on_press=self._on_press)
         self.bind(on_release=self._on_release)
@@ -123,51 +123,90 @@ class PulsingButton(Button):
         self._bg.size = self.size
     
     def _on_press(self, *args):
-        anim = Animation(size_hint_x=0.95, size_hint_y=0.95, duration=0.1)
+        # iOS风格按压缩放
+        anim = Animation(scale_x=0.96, scale_y=0.96, opacity=0.9, duration=0.1)
         anim.start(self)
     
     def _on_release(self, *args):
-        anim = Animation(size_hint_x=1, size_hint_y=1, duration=0.1)
+        anim = Animation(scale_x=1, scale_y=1, opacity=1, duration=0.2, t='out_back')
         anim.start(self)
 
-class StatusIndicator(BoxLayout):
-    """状态指示器（带动画）"""
-    def __init__(self, **kwargs):
+class IOSTextButton(Button):
+    """iOS风格文字按钮"""
+    def __init__(self, color=C_IOS_BLUE, **kwargs):
+        super().__init__(**kwargs)
+        self.background_color = (0, 0, 0, 0)
+        self.color = color
+        self.bold = True
+
+class IOSSegmentedControl(BoxLayout):
+    """iOS风格分段控件"""
+    def __init__(self, options, callback=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
-        self.spacing = 8
+        self.spacing = 0
         self.size_hint_y = None
-        self.height = 30
+        self.height = 32
+        self.callback = callback
+        self.buttons = []
+        self.selected_index = 0
         
-        self.indicator = Label(text="●", font_size=16, color=C_WARNING, size_hint_x=0.1)
-        self.add_widget(self.indicator)
+        with self.canvas.before:
+            Color(0.9, 0.9, 0.92, 1)
+            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[8])
+        self.bind(pos=self._update_bg, size=self._update_bg)
         
-        self.status_text = Label(text="就绪", font_size=13, font_name=FONT, 
-                                color=C_TEXT_SUB, size_hint_x=0.9)
-        self.add_widget(self.status_text)
+        for i, option in enumerate(options):
+            btn = IOSTextButton(text=option, font_size=13, font_name=FONT)
+            btn.bind(on_press=lambda x, idx=i: self._select(idx))
+            self.add_widget(btn)
+            self.buttons.append(btn)
         
-        # 脉冲动画
-        self._pulse_animation()
+        self._update_selection()
     
-    def _pulse_animation(self):
-        anim = Animation(color=(1, 0.8, 0, 1), duration=0.5) + \
-               Animation(color=C_WARNING, duration=0.5)
-        anim.repeat = True
-        anim.start(self.indicator)
+    def _update_bg(self, *a):
+        self._bg.pos = self.pos
+        self._bg.size = self.size
     
-    def set_status(self, text, color=C_WARNING):
-        self.status_text.text = text
-        self.indicator.color = color
-        if color == C_SUCCESS:
-            anim = Animation(color=(0.2, 1, 0.5, 1), duration=0.5) + \
-                   Animation(color=C_SUCCESS, duration=0.5)
-            anim.repeat = True
-            anim.start(self.indicator)
-        elif color == C_DANGER:
-            anim = Animation(color=(1, 0.3, 0.3, 1), duration=0.5) + \
-                   Animation(color=C_DANGER, duration=0.5)
-            anim.repeat = True
-            anim.start(self.indicator)
+    def _select(self, index):
+        self.selected_index = index
+        self._update_selection()
+        if self.callback:
+            self.callback(index)
+    
+    def _update_selection(self):
+        for i, btn in enumerate(self.buttons):
+            if i == self.selected_index:
+                btn.color = C_TEXT_WHITE
+                with btn.canvas.before:
+                    Color(*C_IOS_BLUE)
+                    btn._bg = RoundedRectangle(pos=btn.pos, size=btn.size, radius=[6])
+            else:
+                btn.color = C_TEXT
+                with btn.canvas.before:
+                    Color(0, 0, 0, 0)
+                    btn._bg = RoundedRectangle(pos=btn.pos, size=btn.size, radius=[6])
+
+class IOSListItem(BoxLayout):
+    """iOS风格列表项"""
+    def __init__(self, text, detail=None, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.spacing = 10
+        self.size_hint_y = None
+        self.height = 44
+        self.padding = [16, 0, 16, 0]
+        
+        self.add_widget(Label(text=text, font_size=16, font_name=FONT, 
+                             color=C_TEXT, size_hint_x=0.6, halign='left'))
+        
+        if detail:
+            self.add_widget(Label(text=detail, font_size=14, font_name=FONT, 
+                                 color=C_TEXT_SECONDARY, size_hint_x=0.3, halign='right'))
+        
+        # 箭头
+        self.add_widget(Label(text=">", font_size=16, font_name=FONT, 
+                             color=C_TEXT_TERTIARY, size_hint_x=0.1, halign='right'))
 
 class MsgApp(App):
     def build(self):
@@ -183,202 +222,182 @@ class MsgApp(App):
         self.start_time = None
 
         root = ScrollView(do_scroll_x=False)
-        content = BoxLayout(orientation='vertical', padding=16, spacing=12, size_hint_y=None)
+        content = BoxLayout(orientation='vertical', padding=16, spacing=20, size_hint_y=None)
         content.bind(minimum_height=content.setter('height'))
 
-        # 标题区域
-        title_box = BoxLayout(orientation='vertical', size_hint_y=None, height=60)
-        title = Label(text="[b]消息助手[/b]", markup=True, font_size=26, font_name=FONT, 
-                      color=C_TEXT_WHITE, size_hint_y=None, height=35)
-        subtitle = Label(text="智能自动发送工具", font_size=12, font_name=FONT, 
-                        color=(1, 1, 1, 0.7), size_hint_y=None, height=20)
-        title_box.add_widget(title)
-        title_box.add_widget(subtitle)
-        content.add_widget(title_box)
+        # 标题
+        header = BoxLayout(orientation='vertical', size_hint_y=None, height=50)
+        title = Label(text="消息助手", font_size=34, font_name=FONT, 
+                      bold=True, color=C_TEXT, size_hint_y=None, height=40, halign='left')
+        header.add_widget(title)
+        content.add_widget(header)
 
-        # 无障碍服务状态卡片
-        card_service = AnimatedCard(card_color=C_CARD_4, size_hint_y=None, height=100)
-        card_service.add_widget(Label(text="[服务状态]", font_size=14, font_name=FONT, 
-                                     color=C_WARNING, size_hint_y=None, height=22))
-        self.service_indicator = StatusIndicator()
-        card_service.add_widget(self.service_indicator)
-        btn_accessibility = PulsingButton(C_INFO, C_INFO_GRADIENT, text="[开启] 无障碍服务", 
-                                         font_size=14, font_name=FONT, size_hint_y=None, height=40)
-        btn_accessibility.bind(on_press=self._open_accessibility)
-        card_service.add_widget(btn_accessibility)
+        # 服务状态卡片
+        card_service = IOSCard(size_hint_y=None, height=120)
+        card_service.add_widget(Label(text="服务状态", font_size=13, font_name=FONT, 
+                                     color=C_TEXT_SECONDARY, size_hint_y=None, height=20, halign='left'))
+        
+        self.service_status = Label(text="无障碍服务未开启", font_size=17, font_name=FONT, 
+                                   color=C_IOS_ORANGE, size_hint_y=None, height=30, halign='left')
+        card_service.add_widget(self.service_status)
+        
+        btn_access = IOSButton(C_IOS_BLUE, text="开启无障碍服务", font_size=17, font_name=FONT, 
+                              size_hint_y=None, height=44)
+        btn_access.bind(on_press=self._open_accessibility)
+        card_service.add_widget(btn_access)
         content.add_widget(card_service)
 
         # 消息输入卡片
-        card1 = AnimatedCard(card_color=C_CARD_1, size_hint_y=None, height=250)
-        card1.add_widget(Label(text="[消息内容]", font_size=15, font_name=FONT, 
-                              color=C_PRIMARY, size_hint_y=None, height=26))
+        card_msg = IOSCard(size_hint_y=None, height=280)
+        card_msg.add_widget(Label(text="消息内容", font_size=13, font_name=FONT, 
+                                 color=C_TEXT_SECONDARY, size_hint_y=None, height=20, halign='left'))
         
-        # 消息输入区域
-        input_box = BoxLayout(orientation='vertical', size_hint_y=None, height=160)
-        self.msg_input = TextInput(hint_text="输入消息，每行一条\n支持emoji表情 😀", 
-                                  multiline=True, font_size=14, font_name=FONT, 
-                                  size_hint_y=None, height=130, padding=[10,8],
-                                  background_color=(1, 1, 1, 0.6), foreground_color=C_TEXT)
-        input_box.add_widget(self.msg_input)
+        self.msg_input = TextInput(hint_text="输入消息，每行一条", multiline=True, font_size=16, 
+                                  font_name=FONT, size_hint_y=None, height=150, padding=[12,10],
+                                  background_color=(0.95, 0.95, 0.97, 1), foreground_color=C_TEXT)
+        card_msg.add_widget(self.msg_input)
         
         # 字符计数
-        self.char_count = Label(text="0 字符", font_size=11, font_name=FONT, 
-                               color=C_TEXT_SUB, size_hint_y=None, height=20)
+        self.char_count = Label(text="0 字符", font_size=13, font_name=FONT, 
+                               color=C_TEXT_TERTIARY, size_hint_y=None, height=20, halign='right')
         self.msg_input.bind(text=self._update_char_count)
-        input_box.add_widget(self.char_count)
-        card1.add_widget(input_box)
+        card_msg.add_widget(self.char_count)
         
         # 预设按钮
-        btn_row = GridLayout(cols=4, size_hint_y=None, height=36, spacing=6)
+        preset_row = GridLayout(cols=4, size_hint_y=None, height=32, spacing=8)
         presets = [
-            ("表情", lambda x: self._preset("emoji"), C_SUCCESS),
-            ("数字", lambda x: self._preset("num"), C_INFO),
-            ("问候", lambda x: self._preset("greet"), C_WARNING),
-            ("清空", lambda x: setattr(self.msg_input, 'text', ''), C_DANGER)
+            ("表情", lambda x: self._preset("emoji"), C_IOS_GREEN),
+            ("数字", lambda x: self._preset("num"), C_IOS_BLUE),
+            ("问候", lambda x: self._preset("greet"), C_IOS_ORANGE),
+            ("清空", lambda x: setattr(self.msg_input, 'text', ''), C_IOS_RED)
         ]
         for text, callback, color in presets:
-            b = PulsingButton(color, (color[0]*0.8, color[1]*0.8, color[2]*0.8, 1), 
-                             text=text, font_size=12, font_name=FONT)
-            b.bind(on_press=callback)
-            btn_row.add_widget(b)
-        card1.add_widget(btn_row)
-        content.add_widget(card1)
+            btn = IOSTextButton(color=color, text=text, font_size=14, font_name=FONT)
+            btn.bind(on_press=callback)
+            preset_row.add_widget(btn)
+        card_msg.add_widget(preset_row)
+        content.add_widget(card_msg)
 
         # 目标应用卡片
-        card_target = AnimatedCard(card_color=C_CARD_3, size_hint_y=None, height=100)
-        card_target.add_widget(Label(text="[目标应用]", font_size=15, font_name=FONT, 
-                                    color=C_SUCCESS, size_hint_y=None, height=26))
-        row_target = BoxLayout(size_hint_y=None, height=36)
-        row_target.add_widget(Label(text="应用", font_size=13, font_name=FONT, 
-                                   color=C_TEXT_SUB, size_hint_x=0.3))
+        card_app = IOSCard(size_hint_y=None, height=100)
+        card_app.add_widget(Label(text="目标应用", font_size=13, font_name=FONT, 
+                                 color=C_TEXT_SECONDARY, size_hint_y=None, height=20, halign='left'))
+        
+        app_row = IOSListItem("应用", detail="微信")
         self.app_sp = Spinner(text='微信', values=('微信','QQ','钉钉','飞书','Telegram','WhatsApp'), 
-                             font_size=13, font_name=FONT, size_hint_x=0.7,
-                             background_color=C_SUCCESS, color=C_TEXT_WHITE)
-        row_target.add_widget(self.app_sp)
-        card_target.add_widget(row_target)
-        content.add_widget(card_target)
+                             font_size=16, font_name=FONT, size_hint_x=0.7,
+                             background_color=(0,0,0,0), color=C_TEXT_SECONDARY)
+        app_row.clear_widgets()
+        app_row.add_widget(Label(text="应用", font_size=16, font_name=FONT, 
+                                color=C_TEXT, size_hint_x=0.3))
+        app_row.add_widget(self.app_sp)
+        card_app.add_widget(app_row)
+        content.add_widget(card_app)
 
         # 设置卡片
-        card2 = AnimatedCard(card_color=C_CARD_2, size_hint_y=None, height=220)
-        card2.add_widget(Label(text="[设置]", font_size=15, font_name=FONT, 
-                              color=C_INFO, size_hint_y=None, height=26))
+        card_settings = IOSCard(size_hint_y=None, height=200)
+        card_settings.add_widget(Label(text="设置", font_size=13, font_name=FONT, 
+                                      color=C_TEXT_SECONDARY, size_hint_y=None, height=20, halign='left'))
         
-        # 模式
-        row1 = BoxLayout(size_hint_y=None, height=36)
-        row1.add_widget(Label(text="模式", font_size=13, font_name=FONT, 
-                             color=C_TEXT_SUB, size_hint_x=0.3))
-        self.mode_sp = Spinner(text='顺序', values=('顺序','随机','单条'), 
-                              font_size=13, font_name=FONT, size_hint_x=0.7,
-                              background_color=C_INFO, color=C_TEXT_WHITE)
-        row1.add_widget(self.mode_sp)
-        card2.add_widget(row1)
+        # 模式选择
+        card_settings.add_widget(Label(text="发送模式", font_size=15, font_name=FONT, 
+                                      color=C_TEXT, size_hint_y=None, height=25, halign='left'))
+        self.mode_control = IOSSegmentedControl(['顺序', '随机', '单条'], callback=self._on_mode_change)
+        card_settings.add_widget(self.mode_control)
         
-        # 间隔
-        row2 = BoxLayout(size_hint_y=None, height=36)
-        row2.add_widget(Label(text="间隔", font_size=13, font_name=FONT, 
-                             color=C_TEXT_SUB, size_hint_x=0.3))
-        self.speed_sl = Slider(min=0.5, max=5.0, value=1.5, step=0.1, size_hint_x=0.5)
-        self.speed_lbl = Label(text="1.5s", font_size=13, font_name=FONT, 
-                              color=C_TEXT, size_hint_x=0.2)
-        self.speed_sl.bind(value=lambda i,v: setattr(self.speed_lbl, 'text', f"{v:.1f}s"))
-        row2.add_widget(self.speed_sl)
-        row2.add_widget(self.speed_lbl)
-        card2.add_widget(row2)
+        # 间隔滑块
+        card_settings.add_widget(Label(text="发送间隔", font_size=15, font_name=FONT, 
+                                      color=C_TEXT, size_hint_y=None, height=25, halign='left'))
+        slider_row = BoxLayout(size_hint_y=None, height=30)
+        self.speed_sl = Slider(min=0.5, max=5.0, value=1.5, step=0.1, size_hint_x=0.7)
+        self.speed_lbl = Label(text="1.5秒", font_size=15, font_name=FONT, 
+                              color=C_TEXT_SECONDARY, size_hint_x=0.3)
+        self.speed_sl.bind(value=lambda i,v: setattr(self.speed_lbl, 'text', f"{v:.1f}秒"))
+        slider_row.add_widget(self.speed_sl)
+        slider_row.add_widget(self.speed_lbl)
+        card_settings.add_widget(slider_row)
         
-        # 批量
-        row3 = BoxLayout(size_hint_y=None, height=36)
-        row3.add_widget(Label(text="批量(0=无限)", font_size=13, font_name=FONT, 
-                             color=C_TEXT_SUB, size_hint_x=0.4))
-        self.batch_input = TextInput(text="0", input_filter='int', font_size=13, font_name=FONT, 
-                                    size_hint_x=0.6, height=30, padding=[6,4], multiline=False,
-                                    background_color=(1, 1, 1, 0.6), foreground_color=C_TEXT)
-        row3.add_widget(self.batch_input)
-        card2.add_widget(row3)
-        
-        # 振动反馈开关
-        row4 = BoxLayout(size_hint_y=None, height=36)
-        row4.add_widget(Label(text="振动反馈", font_size=13, font_name=FONT, 
-                             color=C_TEXT_SUB, size_hint_x=0.5))
-        self.vibrate_switch = Switch(active=True, size_hint_x=0.5)
-        row4.add_widget(self.vibrate_switch)
-        card2.add_widget(row4)
-        
-        content.add_widget(card2)
+        # 批量输入
+        batch_row = IOSListItem("发送数量", detail="0")
+        self.batch_input = TextInput(text="0", input_filter='int', font_size=16, font_name=FONT, 
+                                    size_hint_x=0.5, height=30, padding=[6,4], multiline=False,
+                                    background_color=(0,0,0,0), foreground_color=C_TEXT_SECONDARY)
+        batch_row.clear_widgets()
+        batch_row.add_widget(Label(text="发送数量", font_size=16, font_name=FONT, 
+                                  color=C_TEXT, size_hint_x=0.5))
+        batch_row.add_widget(self.batch_input)
+        batch_row.add_widget(Label(text="(0=无限)", font_size=13, font_name=FONT, 
+                                  color=C_TEXT_TERTIARY, size_hint_x=0.2))
+        card_settings.add_widget(batch_row)
+        content.add_widget(card_settings)
 
         # 控制卡片
-        card3 = AnimatedCard(card_color=C_CARD_4, size_hint_y=None, height=80)
-        card3.add_widget(Label(text="[控制]", font_size=15, font_name=FONT, 
-                              color=C_DANGER, size_hint_y=None, height=26))
-        btn_row2 = GridLayout(cols=3, size_hint_y=None, height=45, spacing=8)
-        self.btn_start = PulsingButton(C_SUCCESS, C_SUCCESS_GRADIENT, text="[开始]", 
-                                      font_size=15, font_name=FONT)
-        self.btn_pause = PulsingButton(C_WARNING, C_WARNING_GRADIENT, text="[暂停]", 
-                                      font_size=15, font_name=FONT, disabled=True)
-        self.btn_stop = PulsingButton(C_DANGER, C_DANGER_GRADIENT, text="[停止]", 
-                                     font_size=15, font_name=FONT, disabled=True)
+        card_control = IOSCard(size_hint_y=None, height=120)
+        card_control.add_widget(Label(text="控制", font_size=13, font_name=FONT, 
+                                     color=C_TEXT_SECONDARY, size_hint_y=None, height=20, halign='left'))
+        
+        btn_row = GridLayout(cols=3, size_hint_y=None, height=50, spacing=12)
+        self.btn_start = IOSButton(C_IOS_GREEN, text="开始", font_size=17, font_name=FONT)
+        self.btn_pause = IOSButton(C_IOS_ORANGE, text="暂停", font_size=17, font_name=FONT, disabled=True)
+        self.btn_stop = IOSButton(C_IOS_RED, text="停止", font_size=17, font_name=FONT, disabled=True)
         self.btn_start.bind(on_press=self._start)
         self.btn_pause.bind(on_press=self._pause)
         self.btn_stop.bind(on_press=self._stop)
-        btn_row2.add_widget(self.btn_start)
-        btn_row2.add_widget(self.btn_pause)
-        btn_row2.add_widget(self.btn_stop)
-        card3.add_widget(btn_row2)
-        content.add_widget(card3)
+        btn_row.add_widget(self.btn_start)
+        btn_row.add_widget(self.btn_pause)
+        btn_row.add_widget(self.btn_stop)
+        card_control.add_widget(btn_row)
+        content.add_widget(card_control)
 
         # 状态卡片
-        card4 = AnimatedCard(card_color=C_CARD_5, size_hint_y=None, height=80)
-        card4.add_widget(Label(text="[状态]", font_size=15, font_name=FONT, 
-                              color=C_PRIMARY, size_hint_y=None, height=20))
-        status_row = BoxLayout()
-        self.status_lbl = Label(text="就绪", font_size=13, font_name=FONT, color=C_TEXT_SUB)
-        self.count_lbl = Label(text="0", font_size=22, font_name=FONT, bold=True, color=C_PRIMARY)
+        card_status = IOSCard(size_hint_y=None, height=100)
+        card_status.add_widget(Label(text="状态", font_size=13, font_name=FONT, 
+                                    color=C_TEXT_SECONDARY, size_hint_y=None, height=20, halign='left'))
+        
+        status_row = BoxLayout(size_hint_y=None, height=30)
+        self.status_lbl = Label(text="就绪", font_size=17, font_name=FONT, color=C_TEXT)
+        self.count_lbl = Label(text="0", font_size=28, font_name=FONT, bold=True, color=C_IOS_BLUE)
         status_row.add_widget(self.status_lbl)
         status_row.add_widget(self.count_lbl)
-        card4.add_widget(status_row)
+        card_status.add_widget(status_row)
         
         # 统计信息
-        stats_row = BoxLayout(size_hint_y=None, height=20)
-        self.stats_lbl = Label(text="速度: 0条/秒 | 耗时: 0秒", font_size=11, font_name=FONT, 
-                              color=C_TEXT_SUB)
-        stats_row.add_widget(self.stats_lbl)
-        card4.add_widget(stats_row)
-        content.add_widget(card4)
+        self.stats_lbl = Label(text="速度: 0条/秒 | 耗时: 0秒", font_size=13, font_name=FONT, 
+                              color=C_TEXT_TERTIARY, size_hint_y=None, height=20)
+        card_status.add_widget(self.stats_lbl)
+        content.add_widget(card_status)
 
         # 日志卡片
-        card5 = AnimatedCard(card_color=(0.1, 0.1, 0.2, 0.9), size_hint_y=None, height=200)
-        card5.add_widget(Label(text="[日志]", font_size=15, font_name=FONT, 
-                              color=C_PRIMARY_GRADIENT, size_hint_y=None, height=26))
-        self.log_area = TextInput(readonly=True, background_color=(0.05, 0.05, 0.1, 0.8), 
-                                 foreground_color=C_SUCCESS_GRADIENT, font_size=11, font_name=FONT, 
-                                 size_hint_y=None, height=140)
-        card5.add_widget(self.log_area)
-        content.add_widget(card5)
+        card_log = IOSCard(size_hint_y=None, height=200)
+        card_log.add_widget(Label(text="日志", font_size=13, font_name=FONT, 
+                                 color=C_TEXT_SECONDARY, size_hint_y=None, height=20, halign='left'))
+        
+        self.log_area = TextInput(readonly=True, background_color=(0.95, 0.95, 0.97, 1), 
+                                 foreground_color=C_TEXT, font_size=13, font_name=FONT, 
+                                 size_hint_y=None, height=150)
+        card_log.add_widget(self.log_area)
+        content.add_widget(card_log)
 
         # 历史记录卡片
-        card6 = AnimatedCard(card_color=C_CARD_1, size_hint_y=None, height=120)
-        card6.add_widget(Label(text="[历史记录]", font_size=15, font_name=FONT, 
-                              color=C_INFO, size_hint_y=None, height=26))
+        card_history = IOSCard(size_hint_y=None, height=120)
+        card_history.add_widget(Label(text="历史记录", font_size=13, font_name=FONT, 
+                                     color=C_TEXT_SECONDARY, size_hint_y=None, height=20, halign='left'))
         
-        # 历史消息列表
-        history_box = BoxLayout(orientation='vertical', size_hint_y=None, height=70)
         self.history_spinner = Spinner(text='选择历史消息', values=('暂无历史记录',), 
-                                      font_size=12, font_name=FONT, size_hint_y=None, height=35,
-                                      background_color=C_INFO, color=C_TEXT_WHITE)
+                                      font_size=15, font_name=FONT, size_hint_y=None, height=40,
+                                      background_color=(0,0,0,0), color=C_TEXT_SECONDARY)
         self.history_spinner.bind(text=self._load_history_message)
-        history_box.add_widget(self.history_spinner)
+        card_history.add_widget(self.history_spinner)
         
-        history_btn_row = GridLayout(cols=2, size_hint_y=None, height=30, spacing=6)
-        btn_save = PulsingButton(C_SUCCESS, C_SUCCESS_GRADIENT, text="保存当前", 
-                                font_size=12, font_name=FONT)
+        history_btn_row = GridLayout(cols=2, size_hint_y=None, height=32, spacing=12)
+        btn_save = IOSTextButton(C_IOS_BLUE, text="保存当前", font_size=15, font_name=FONT)
         btn_save.bind(on_press=self._save_current_message)
-        btn_clear_history = PulsingButton(C_DANGER, C_DANGER_GRADIENT, text="清空历史", 
-                                         font_size=12, font_name=FONT)
-        btn_clear_history.bind(on_press=self._clear_history)
+        btn_clear = IOSTextButton(C_IOS_RED, text="清空历史", font_size=15, font_name=FONT)
+        btn_clear.bind(on_press=self._clear_history)
         history_btn_row.add_widget(btn_save)
-        history_btn_row.add_widget(btn_clear_history)
-        history_box.add_widget(history_btn_row)
-        card6.add_widget(history_box)
-        content.add_widget(card6)
+        history_btn_row.add_widget(btn_clear)
+        card_history.add_widget(history_btn_row)
+        content.add_widget(card_history)
 
         root.add_widget(content)
         
@@ -392,6 +411,11 @@ class MsgApp(App):
         count = len(value)
         self.char_count.text = f"{count} 字符"
 
+    def _on_mode_change(self, index):
+        """模式切换回调"""
+        modes = ['顺序', '随机', '单条']
+        self._log(f"已切换到{modes[index]}模式")
+
     def _check_service(self):
         """检查无障碍服务状态"""
         if ANDROID:
@@ -399,14 +423,18 @@ class MsgApp(App):
                 AutoSendService = autoclass('com.wechat.flood.AutoSendService')
                 service = AutoSendService.getInstance()
                 if service and service.isServiceReady():
-                    self.service_indicator.set_status("无障碍服务已开启", C_SUCCESS)
+                    self.service_status.text = "无障碍服务已开启"
+                    self.service_status.color = C_IOS_GREEN
                     self.auto_send_service = service
                 else:
-                    self.service_indicator.set_status("无障碍服务未开启", C_WARNING)
+                    self.service_status.text = "无障碍服务未开启"
+                    self.service_status.color = C_IOS_ORANGE
             except:
-                self.service_indicator.set_status("无障碍服务未开启", C_WARNING)
+                self.service_status.text = "无障碍服务未开启"
+                self.service_status.color = C_IOS_ORANGE
         else:
-            self.service_indicator.set_status("仅支持Android设备", C_WARNING)
+            self.service_status.text = "仅支持Android设备"
+            self.service_status.color = C_IOS_ORANGE
 
     def _open_accessibility(self, *args):
         """打开无障碍设置"""
@@ -463,7 +491,7 @@ class MsgApp(App):
         current = self.msg_input.text.strip()
         if current and current not in self.history:
             self.history.insert(0, current)
-            self.history = self.history[:20]  # 只保留20条
+            self.history = self.history[:20]
             self._save_history()
             self._update_history_spinner()
             self._log("已保存到历史记录")
@@ -493,12 +521,12 @@ class MsgApp(App):
 
     def _vibrate(self):
         """振动反馈"""
-        if ANDROID and self.vibrate_switch.active:
+        if ANDROID:
             try:
                 Vibrator = autoclass('android.os.Vibrator')
                 activity = autoclass('org.kivy.android.PythonActivity').mActivity
                 vibrator = activity.getSystemService(activity.VIBRATOR_SERVICE)
-                vibrator.vibrate(50)  # 50毫秒
+                vibrator.vibrate(50)
             except:
                 pass
 
@@ -513,7 +541,6 @@ class MsgApp(App):
             self.status_lbl.text = "消息为空"
             return
         
-        # 检查无障碍服务
         if ANDROID and not self.auto_send_service:
             self._log("请先开启无障碍服务")
             return
@@ -531,10 +558,8 @@ class MsgApp(App):
         self._vibrate()
         self._log(f"开始 {len(msgs)} 条消息")
         
-        # 自动保存到历史
         self._save_current_message()
         
-        # 启动自动发送
         if ANDROID and self.auto_send_service:
             package = self._get_app_package()
             batch = int(self.batch_input.text or 0) or 999999
@@ -546,7 +571,7 @@ class MsgApp(App):
 
     def _auto_send_loop(self):
         """自动发送循环"""
-        mode = self.mode_sp.text
+        mode = ['顺序', '随机', '单条'][self.mode_control.selected_index]
         interval = self.speed_sl.value
         package = self._get_app_package()
         
@@ -572,7 +597,6 @@ class MsgApp(App):
                 Clock.schedule_once(lambda dt: self._update_stats())
                 self._vibrate()
                 
-                # 检查批量限制
                 batch = int(self.batch_input.text or 0) or 999999
                 if self.sent_count >= batch:
                     break
@@ -586,7 +610,7 @@ class MsgApp(App):
 
     def _clipboard_loop(self):
         """剪贴板模式循环"""
-        mode = self.mode_sp.text
+        mode = ['顺序', '随机', '单条'][self.mode_control.selected_index]
         interval = self.speed_sl.value
         batch = int(self.batch_input.text or 0) or 999999
         
@@ -632,7 +656,7 @@ class MsgApp(App):
         self.is_paused = False
         self.btn_start.disabled = False
         self.btn_pause.disabled = True
-        self.btn_pause.text = "[暂停]"
+        self.btn_pause.text = "暂停"
         self.btn_stop.disabled = True
         self.status_lbl.text = "已停止"
         self._vibrate()
@@ -644,12 +668,12 @@ class MsgApp(App):
         if not self.is_running: return
         self.is_paused = not self.is_paused
         if self.is_paused:
-            self.btn_pause.text = "[继续]"
+            self.btn_pause.text = "继续"
             self.status_lbl.text = "已暂停"
             self._vibrate()
             self._log("已暂停")
         else:
-            self.btn_pause.text = "[暂停]"
+            self.btn_pause.text = "暂停"
             self.status_lbl.text = "运行中..."
             self._vibrate()
             self._log("已继续")
