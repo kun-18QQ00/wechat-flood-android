@@ -85,18 +85,18 @@ class MsgApp(App):
         content.add_widget(title)
 
         # 无障碍服务状态
-        self.service_status = Label(text="无障碍服务未开启", font_size=12, font_name=FONT, color=C_WARNING, size_hint_y=None, height=30)
+        self.service_status = Label(text="[!] 无障碍服务未开启", font_size=12, font_name=FONT, color=C_WARNING, size_hint_y=None, height=30)
         content.add_widget(self.service_status)
         
         # 开启无障碍服务按钮
-        btn_accessibility = Button(text="开启无障碍服务", font_size=14, font_name=FONT, 
+        btn_accessibility = Button(text="[开启] 无障碍服务", font_size=14, font_name=FONT, 
                                    background_color=C_INFO, color=(1,1,1,1), size_hint_y=None, height=40)
         btn_accessibility.bind(on_press=self._open_accessibility)
         content.add_widget(btn_accessibility)
 
         # 消息输入卡片
         card1 = CardBox(size_hint_y=None, height=220)
-        card1.add_widget(Label(text="消息内容", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left', text_size=(None,None)))
+        card1.add_widget(Label(text="[消息内容]", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left', text_size=(None,None)))
         self.msg_input = TextInput(hint_text="输入消息，每行一条", multiline=True, font_size=14, font_name=FONT, size_hint_y=None, height=130, padding=[10,8])
         card1.add_widget(self.msg_input)
         btn_row = GridLayout(cols=3, size_hint_y=None, height=36, spacing=6)
@@ -109,7 +109,7 @@ class MsgApp(App):
 
         # 目标应用卡片
         card_target = CardBox(size_hint_y=None, height=100)
-        card_target.add_widget(Label(text="目标应用", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
+        card_target.add_widget(Label(text="[目标应用]", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
         row_target = BoxLayout(size_hint_y=None, height=36)
         row_target.add_widget(Label(text="应用", font_size=13, font_name=FONT, color=C_TEXT_SUB, size_hint_x=0.3))
         self.app_sp = Spinner(text='微信', values=('微信','QQ','钉钉','飞书','Telegram','WhatsApp'), font_size=13, font_name=FONT, size_hint_x=0.7)
@@ -119,7 +119,7 @@ class MsgApp(App):
 
         # 设置卡片
         card2 = CardBox(size_hint_y=None, height=200)
-        card2.add_widget(Label(text="设置", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
+        card2.add_widget(Label(text="[设置]", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
         # 模式
         row1 = BoxLayout(size_hint_y=None, height=36)
         row1.add_widget(Label(text="模式", font_size=13, font_name=FONT, color=C_TEXT_SUB, size_hint_x=0.3))
@@ -145,11 +145,11 @@ class MsgApp(App):
 
         # 控制卡片
         card3 = CardBox(size_hint_y=None, height=70)
-        card3.add_widget(Label(text="控制", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
+        card3.add_widget(Label(text="[控制]", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
         btn_row2 = GridLayout(cols=3, size_hint_y=None, height=40, spacing=8)
-        self.btn_start = Button(text="开始", font_size=14, font_name=FONT, background_color=C_PRIMARY, color=(1,1,1,1))
-        self.btn_pause = Button(text="暂停", font_size=14, font_name=FONT, background_color=C_WARNING, color=(1,1,1,1), disabled=True)
-        self.btn_stop = Button(text="停止", font_size=14, font_name=FONT, background_color=C_DANGER, color=(1,1,1,1), disabled=True)
+        self.btn_start = Button(text="[开始]", font_size=14, font_name=FONT, background_color=C_PRIMARY, color=(1,1,1,1))
+        self.btn_pause = Button(text="[暂停]", font_size=14, font_name=FONT, background_color=C_WARNING, color=(1,1,1,1), disabled=True)
+        self.btn_stop = Button(text="[停止]", font_size=14, font_name=FONT, background_color=C_DANGER, color=(1,1,1,1), disabled=True)
         self.btn_start.bind(on_press=self._start)
         self.btn_pause.bind(on_press=self._pause)
         self.btn_stop.bind(on_press=self._stop)
@@ -161,7 +161,7 @@ class MsgApp(App):
 
         # 状态卡片
         card4 = CardBox(size_hint_y=None, height=60)
-        card4.add_widget(Label(text="状态", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=20))
+        card4.add_widget(Label(text="[状态]", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=20))
         status_row = BoxLayout()
         self.status_lbl = Label(text="就绪", font_size=13, font_name=FONT, color=C_TEXT_SUB)
         self.count_lbl = Label(text="0", font_size=18, font_name=FONT, bold=True, color=C_PRIMARY)
@@ -172,7 +172,7 @@ class MsgApp(App):
 
         # 日志
         card5 = CardBox(size_hint_y=None, height=180)
-        card5.add_widget(Label(text="日志", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
+        card5.add_widget(Label(text="[日志]", font_size=14, font_name=FONT, color=C_TEXT, size_hint_y=None, height=24, halign='left'))
         self.log_area = TextInput(readonly=True, background_color=(0.12,0.12,0.18,1), foreground_color=(0.65,0.89,0.63,1), font_size=11, font_name=FONT, size_hint_y=None, height=120)
         card5.add_widget(self.log_area)
         content.add_widget(card5)
@@ -191,17 +191,17 @@ class MsgApp(App):
                 AutoSendService = autoclass('com.wechat.flood.AutoSendService')
                 service = AutoSendService.getInstance()
                 if service and service.isServiceReady():
-                    self.service_status.text = "无障碍服务已开启"
+                    self.service_status.text = "[OK] 无障碍服务已开启"
                     self.service_status.color = C_PRIMARY
                     self.auto_send_service = service
                 else:
-                    self.service_status.text = "无障碍服务未开启"
+                    self.service_status.text = "[!] 无障碍服务未开启"
                     self.service_status.color = C_WARNING
             except:
-                self.service_status.text = "无障碍服务未开启"
+                self.service_status.text = "[!] 无障碍服务未开启"
                 self.service_status.color = C_WARNING
         else:
-            self.service_status.text = "仅支持Android设备"
+            self.service_status.text = "[!] 仅支持Android设备"
             self.service_status.color = C_WARNING
 
     def _open_accessibility(self, *args):
@@ -371,7 +371,7 @@ class MsgApp(App):
         self.is_paused = False
         self.btn_start.disabled = False
         self.btn_pause.disabled = True
-        self.btn_pause.text = "暂停"
+        self.btn_pause.text = "[暂停]"
         self.btn_stop.disabled = True
         self.status_lbl.text = "已停止"
         self._log(f"完成 共{self.sent_count}条")
@@ -381,11 +381,11 @@ class MsgApp(App):
         if not self.is_running: return
         self.is_paused = not self.is_paused
         if self.is_paused:
-            self.btn_pause.text = "继续"
+            self.btn_pause.text = "[继续]"
             self.status_lbl.text = "已暂停"
             self._log("已暂停")
         else:
-            self.btn_pause.text = "暂停"
+            self.btn_pause.text = "[暂停]"
             self.status_lbl.text = "运行中..."
             self._log("已继续")
 
