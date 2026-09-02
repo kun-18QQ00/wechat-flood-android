@@ -4,7 +4,7 @@ package.name = msgsender
 package.domain = org.msg
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json,ttf,otf,xml,html,css,js
-source.include_patterns = fonts/*,res/xml/*,src/**/*.java,assets/**
+source.include_patterns = fonts/*,res/xml/*,assets/**
 version = 6.0.0
 requirements = python3,kivy,pyjnius,android
 android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,BIND_ACCESSIBILITY_SERVICE,VIBRATE,FOREGROUND_SERVICE
@@ -17,14 +17,9 @@ orientation = portrait
 fullscreen = 0
 android.allow_backup = True
 android.manifest.custom_enabled = true
-android.add_jars = src/**/*.java
-android.add_activities = com.msg.sender.MessageAccessibilityService
 
 # WebView支持
 android.webview = true
-
-# 混淆配置
-android.release_artifact = aar
 
 # 图标
 icon.filename = %(source.dir)s/assets/icon.png
