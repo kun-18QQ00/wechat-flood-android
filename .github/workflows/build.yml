@@ -27,6 +27,7 @@ jobs:
           git \
           autoconf \
           libtool \
+          libtool-bin \
           pkg-config \
           zlib1g-dev \
           libncurses5-dev \
@@ -34,7 +35,9 @@ jobs:
           cmake \
           libffi-dev \
           libssl-dev \
-          automake
+          automake \
+          unzip \
+          zip
     
     - name: Install Python dependencies
       run: |
@@ -43,6 +46,8 @@ jobs:
     
     - name: Build APK
       run: |
+        export LIBTOOL=/usr/bin/libtool
+        export LIBTOOLIZE=/usr/bin/libtoolize
         buildozer android debug
     
     - name: Upload APK
