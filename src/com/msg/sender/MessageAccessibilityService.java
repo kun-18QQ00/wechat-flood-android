@@ -7,6 +7,8 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -14,209 +16,408 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.List;
 
 /**
- * 消息助手无障碍服务
- * 实现真正的自动发送功能
+ * 消息助手无障碍服务 v7.0
+ * 自动识别聊天输入框，输入文本并点击发送
  */
 public class MessageAccessibilityService extends AccessibilityService {
     private static final String TAG = "MsgSender";
     private static MessageAccessibilityService instance;
+
+    // 待发送队列
     private static String pendingMessage = null;
     private static boolean autoMode = false;
-    
-    // 支持的应用包名
+    private static int sendCount = 0;
+    private static int maxCount = 0;
+    private static String targetPackage = null;
+
+    // 支持的应用
     private static final String[] SUPPORTED_PACKAGES = {
-        "com.tencent.mm",           // 微信
-        "com.tencent.mobileqq",     // QQ
-        "com.alibaba.android.rimet", // 钉钉
-        "com.ss.android.lark",      // 飞书
-        "org.telegram.messenger",   // Telegram
-        "com.whatsapp"              // WhatsApp
+        "com.tencent.mm",
+        "com.tencent.mobileqq",
+        "com.alibaba.android.rimet",
+        "com.ss.android.lark",
+        "org.telegram.messenger",
+        "com.whatsapp"
     };
-    
+
     public static MessageAccessibilityService getInstance() {
         return instance;
     }
-    
+
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
-        Log.d(TAG, "无障碍服务已连接");
-        
-        // 配置服务
-        AccessibilityServiceInfo info = new AccessibilityServiceInfo();
-        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED |
-                         AccessibilityEvent.TYPE_VIEW_CLICKED |
-                         AccessibilityEvent.TYPE_VIEW_FOCUSED;
+        Log.i(TAG, "无障碍服务已连接");
+
+        AccessibilityServiceInfo info = getServiceInfo();
+        if (info == null) {
+            info = new AccessibilityServiceInfo();
+        }
+        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                | AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                | AccessibilityEvent.TYPE_VIEW_CLICKED;
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
         info.notificationTimeout = 100;
-        info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS |
-                    AccessibilityServiceFlag.RETRIEVE_INTERACTIVE_WINDOWS;
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
-        }
-        
+        info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+                | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+                | AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+
         setServiceInfo(info);
     }
-    
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null) return;
-        
-        // 检查是否是目标应用
-        CharSequence packageName = event.getPackageName();
-        if (packageName == null) return;
-        
-        String pkg = packageName.toString();
-        if (!isSupportedPackage(pkg)) return;
-        
-        // 如果有待发送消息，尝试发送
-        if (pendingMessage != null && !pendingMessage.isEmpty()) {
-            trySendMessage(pkg);
+        if (!autoMode || pendingMessage == null || pendingMessage.isEmpty()) return;
+
+        CharSequence pkgCs = event.getPackageName();
+        if (pkgCs == null) return;
+        String pkg = pkgCs.toString();
+
+        // 如果指定了目标包名，只在目标应用中发送
+        if (targetPackage != null && !targetPackage.isEmpty()) {
+            if (!pkg.equals(targetPackage)) return;
+        } else {
+            // 没有指定目标，检查是否是支持的应用
+            if (!isSupportedPackage(pkg)) return;
+        }
+
+        // 检查是否在聊天页面（通过查找可编辑输入框判断）
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return;
+
+        try {
+            AccessibilityNodeInfo inputNode = findEditableNode(root);
+            if (inputNode != null) {
+                performSend(inputNode, root);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "处理事件失败: " + e.getMessage());
+        } finally {
+            root.recycle();
         }
     }
-    
+
     @Override
     public void onInterrupt() {
-        Log.d(TAG, "无障碍服务被中断");
+        Log.w(TAG, "无障碍服务被中断");
     }
-    
+
     @Override
     public void onDestroy() {
         super.onDestroy();
         instance = null;
-        Log.d(TAG, "无障碍服务已销毁");
+        Log.i(TAG, "无障碍服务已销毁");
     }
-    
+
+    // ══════════════════════════════════════
+    // 公开 API（供 Python 端调用）
+    // ══════════════════════════════════════
+
     /**
-     * 检查是否是支持的应用包名
+     * 开始自动发送
+     * @param message  要发送的消息文本
+     * @param pkg      目标应用包名（null=自动检测）
+     * @param count    发送次数上限（0=无限）
+     * @param delay    每次发送间隔毫秒
+     * @return 是否成功启动
      */
+    public boolean sendMessage(String message, String pkg, int count, long delay) {
+        if (message == null || message.isEmpty()) return false;
+
+        pendingMessage = message;
+        targetPackage = pkg;
+        maxCount = count;
+        sendCount = 0;
+        autoMode = true;
+
+        Log.i(TAG, "开始发送: " + message + " -> " + pkg);
+
+        // 尝试打开目标应用
+        if (pkg != null && !pkg.isEmpty()) {
+            openApp(pkg);
+        }
+
+        // 延迟后尝试立即发送
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            tryImmediateSend();
+        }, 500);
+
+        return true;
+    }
+
+    /**
+     * 停止发送
+     */
+    public void stopSending() {
+        autoMode = false;
+        pendingMessage = null;
+        targetPackage = null;
+        maxCount = 0;
+        sendCount = 0;
+        Log.i(TAG, "已停止发送");
+    }
+
+    /**
+     * 检查是否正在运行
+     */
+    public boolean isRunning() {
+        return autoMode;
+    }
+
+    /**
+     * 获取已发送数量
+     */
+    public int getSendCount() {
+        return sendCount;
+    }
+
+    /**
+     * 检查服务是否可用
+     */
+    public boolean isServiceReady() {
+        return instance != null;
+    }
+
+    // ══════════════════════════════════════
+    // 内部方法
+    // ══════════════════════════════════════
+
     private boolean isSupportedPackage(String packageName) {
         for (String pkg : SUPPORTED_PACKAGES) {
-            if (pkg.equals(packageName)) {
-                return true;
-            }
+            if (pkg.equals(packageName)) return true;
         }
         return false;
     }
-    
-    /**
-     * 设置待发送消息
-     */
-    public static void setPendingMessage(String message) {
-        pendingMessage = message;
-        autoMode = true;
-        Log.d(TAG, "设置待发送消息: " + message);
-    }
-    
-    /**
-     * 清除待发送消息
-     */
-    public static void clearPendingMessage() {
-        pendingMessage = null;
-        autoMode = false;
-    }
-    
-    /**
-     * 尝试发送消息
-     */
-    private void trySendMessage(String packageName) {
-        if (pendingMessage == null || pendingMessage.isEmpty()) return;
-        
-        AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-        if (rootNode == null) return;
-        
+
+    private void openApp(String packageName) {
         try {
-            // 查找输入框
-            AccessibilityNodeInfo inputNode = findInputNode(rootNode, packageName);
-            if (inputNode != null) {
-                // 设置文本
-                setTextToNode(inputNode, pendingMessage);
-                
-                // 查找发送按钮并点击
-                AccessibilityNodeInfo sendButton = findSendButton(rootNode, packageName);
-                if (sendButton != null) {
-                    sendButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    Log.d(TAG, "消息已发送: " + pendingMessage);
-                    
-                    // 清除待发送消息
-                    if (!autoMode) {
-                        clearPendingMessage();
-                    }
-                }
+            Intent intent = getPackageManager().getLaunchIntentForPackage(packageName);
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                Log.d(TAG, "已打开应用: " + packageName);
+            } else {
+                Log.w(TAG, "找不到应用: " + packageName);
             }
         } catch (Exception e) {
-            Log.e(TAG, "发送消息失败: " + e.getMessage());
+            Log.e(TAG, "打开应用失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 尝试立即发送（不等待事件）
+     */
+    private void tryImmediateSend() {
+        if (!autoMode || pendingMessage == null) return;
+
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) {
+            Log.d(TAG, "无法获取窗口根节点，等待事件触发");
+            return;
+        }
+
+        try {
+            AccessibilityNodeInfo inputNode = findEditableNode(root);
+            if (inputNode != null) {
+                performSend(inputNode, root);
+            } else {
+                Log.d(TAG, "未找到输入框，等待页面加载");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "立即发送失败: " + e.getMessage());
         } finally {
-            rootNode.recycle();
+            root.recycle();
         }
     }
-    
+
     /**
-     * 查找输入框节点
+     * 执行发送操作：输入文本 -> 点击发送按钮
      */
-    private AccessibilityNodeInfo findInputNode(AccessibilityNodeInfo root, String packageName) {
-        // 微信输入框ID
-        if ("com.tencent.mm".equals(packageName)) {
-            return findNodeById(root, "com.tencent.mm:id/chatting_content_et");
+    private void performSend(AccessibilityNodeInfo inputNode, AccessibilityNodeInfo root) {
+        // 1. 输入文本
+        if (!setNodeText(inputNode, pendingMessage)) {
+            Log.w(TAG, "输入文本失败，尝试粘贴方式");
+            pasteText(inputNode, pendingMessage);
         }
-        // QQ输入框ID
-        else if ("com.tencent.mobileqq".equals(packageName)) {
-            return findNodeById(root, "com.tencent.mobileqq:id/input");
+
+        // 2. 延迟后点击发送按钮
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (!autoMode) return;
+
+            AccessibilityNodeInfo freshRoot = getRootInActiveWindow();
+            if (freshRoot == null) return;
+
+            try {
+                if (clickSendButton(freshRoot)) {
+                    sendCount++;
+                    Log.i(TAG, "已发送第 " + sendCount + " 条");
+
+                    if (maxCount > 0 && sendCount >= maxCount) {
+                        stopSending();
+                        Log.i(TAG, "已达到最大发送次数");
+                    }
+                } else {
+                    Log.w(TAG, "未找到发送按钮");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "点击发送失败: " + e.getMessage());
+            } finally {
+                freshRoot.recycle();
+            }
+        }, 300);
+    }
+
+    /**
+     * 递归查找可编辑的输入框节点
+     */
+    private AccessibilityNodeInfo findEditableNode(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+
+        if (node.isEditable() && node.isVisibleToUser()) {
+            return node;
         }
-        // 钉钉输入框ID
-        else if ("com.alibaba.android.rimet".equals(packageName)) {
-            return findNodeById(root, "com.alibaba.android.rimet:id/et_chat_input");
+
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                AccessibilityNodeInfo result = findEditableNode(child);
+                if (result != null) return result;
+            }
         }
-        // 飞书输入框ID
-        else if ("com.ss.android.lark".equals(packageName)) {
-            return findNodeById(root, "com.ss.android.lark:id/et_chat_input");
-        }
-        // Telegram输入框ID
-        else if ("org.telegram.messenger".equals(packageName)) {
-            return findNodeById(root, "org.telegram.messenger:id/chat_text_edit");
-        }
-        // WhatsApp输入框ID
-        else if ("com.whatsapp".equals(packageName)) {
-            return findNodeById(root, "com.whatsapp:id/entry");
-        }
-        
         return null;
     }
-    
+
     /**
-     * 查找发送按钮
+     * 通过 ACTION_SET_TEXT 设置文本
      */
-    private AccessibilityNodeInfo findSendButton(AccessibilityNodeInfo root, String packageName) {
-        // 微信发送按钮
-        if ("com.tencent.mm".equals(packageName)) {
-            return findNodeById(root, "com.tencent.mm:id/chatting_send_btn");
+    private boolean setNodeText(AccessibilityNodeInfo node, String text) {
+        if (node == null) return false;
+
+        node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Bundle args = new Bundle();
+            args.putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
+            return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
         }
-        // QQ发送按钮
-        else if ("com.tencent.mobileqq".equals(packageName)) {
-            return findNodeById(root, "com.tencent.mobileqq:id/fun_btn");
+        return false;
+    }
+
+    /**
+     * 通过剪贴板粘贴文本（备用方案）
+     */
+    private void pasteText(AccessibilityNodeInfo node, String text) {
+        if (node == null) return;
+
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("msg", text);
+        clipboard.setPrimaryClip(clip);
+
+        node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+        node.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+
+        Log.d(TAG, "已通过粘贴方式输入文本");
+    }
+
+    /**
+     * 查找并点击发送按钮
+     * 优先通过常见ID查找，然后通过文本"发送"/"Send"查找
+     */
+    private boolean clickSendButton(AccessibilityNodeInfo root) {
+        // 方案1：通过常见发送按钮ID查找
+        String[] sendButtonIds = {
+            "com.tencent.mm:id/chatting_send_btn",
+            "com.tencent.mm:id/send_btn",
+            "com.tencent.mobileqq:id/fun_btn",
+            "com.tencent.mobileqq:id/send_btn",
+            "com.alibaba.android.rimet:id/btn_send",
+            "com.ss.android.lark:id/btn_send",
+            "org.telegram.messenger:id/send_button",
+            "com.whatsapp:id/send"
+        };
+
+        for (String id : sendButtonIds) {
+            AccessibilityNodeInfo btn = findNodeById(root, id);
+            if (btn != null) {
+                boolean result = btn.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                btn.recycle();
+                if (result) return true;
+            }
         }
-        // 钉钉发送按钮
-        else if ("com.alibaba.android.rimet".equals(packageName)) {
-            return findNodeById(root, "com.alibaba.android.rimet:id/btn_send");
+
+        // 方案2：通过文本查找"发送"按钮
+        String[] sendTexts = {"发送", "Send", "send"};
+        for (String text : sendTexts) {
+            List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByText(text);
+            if (nodes != null) {
+                for (AccessibilityNodeInfo n : nodes) {
+                    if (n != null && n.isVisibleToUser()) {
+                        // 检查是否是按钮类型
+                        CharSequence className = n.getClassName();
+                        if (className != null && className.toString().contains("Button")) {
+                            boolean result = n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                            n.recycle();
+                            if (result) return true;
+                        }
+                        // 尝试点击任何可点击的节点
+                        if (n.isClickable()) {
+                            boolean result = n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                            n.recycle();
+                            if (result) return true;
+                        }
+                    }
+                    if (n != null) n.recycle();
+                }
+            }
         }
-        // 飞书发送按钮
-        else if ("com.ss.android.lark".equals(packageName)) {
-            return findNodeById(root, "com.ss.android.lark:id/btn_send");
+
+        // 方案3：查找屏幕右下角的可点击节点（微信等应用的发送按钮通常在右下角）
+        AccessibilityNodeInfo rightBottom = findRightBottomClickable(root);
+        if (rightBottom != null) {
+            boolean result = rightBottom.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            rightBottom.recycle();
+            if (result) return true;
         }
-        // Telegram发送按钮
-        else if ("org.telegram.messenger".equals(packageName)) {
-            return findNodeById(root, "org.telegram.messenger:id/send_button");
+
+        return false;
+    }
+
+    /**
+     * 查找右下角的可点击节点（可能是发送按钮）
+     */
+    private AccessibilityNodeInfo findRightBottomClickable(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+
+        android.graphics.Rect rect = new android.graphics.Rect();
+        node.getBoundsInScreen(rect);
+
+        // 检查是否在屏幕右下角区域
+        if (rect.right > 900 && rect.bottom > 1500
+                && node.isClickable() && node.isVisibleToUser()) {
+            CharSequence text = node.getText();
+            CharSequence desc = node.getContentDescription();
+            // 排除明显的非发送按钮
+            if (text != null && (text.toString().contains("发送") || text.toString().length() <= 4)) {
+                return node;
+            }
+            if (desc != null && desc.toString().contains("发送")) {
+                return node;
+            }
         }
-        // WhatsApp发送按钮
-        else if ("com.whatsapp".equals(packageName)) {
-            return findNodeById(root, "com.whatsapp:id/send");
+
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                AccessibilityNodeInfo result = findRightBottomClickable(child);
+                if (result != null) return result;
+            }
         }
-        
         return null;
     }
-    
+
     /**
      * 根据ID查找节点
      */
@@ -226,41 +427,5 @@ public class MessageAccessibilityService extends AccessibilityService {
             return nodes.get(0);
         }
         return null;
-    }
-    
-    /**
-     * 设置节点文本
-     */
-    private void setTextToNode(AccessibilityNodeInfo node, String text) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Bundle arguments = new Bundle();
-            arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
-            node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
-        } else {
-            // 对于旧版本，使用剪贴板方式
-            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            ClipData clip = ClipData.newPlainText("message", text);
-            clipboard.setPrimaryClip(clip);
-            node.performAction(AccessibilityNodeInfo.ACTION_PASTE);
-        }
-    }
-    
-    /**
-     * 打开目标应用
-     */
-    public void openApp(String packageName) {
-        Intent intent = getPackageManager().getLaunchIntentForPackage(packageName);
-        if (intent != null) {
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            Log.d(TAG, "打开应用: " + packageName);
-        }
-    }
-    
-    /**
-     * 检查无障碍服务是否已启用
-     */
-    public static boolean isServiceEnabled() {
-        return instance != null;
     }
 }
