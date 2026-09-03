@@ -5,7 +5,6 @@
 原生Kv UI + Java无障碍服务 + pyjnius桥接
 """
 import os
-import json
 import threading
 import time
 import random
@@ -17,7 +16,7 @@ from kivy.core.text import LabelBase
 from kivy.core.window import Window
 from kivy.utils import platform
 from kivy.logger import Logger
-from kivy.properties import StringProperty, BooleanProperty, NumericProperty
+from kivy.properties import StringProperty, BooleanProperty
 
 ANDROID = platform == 'android'
 
@@ -80,7 +79,6 @@ class MessageApp(App):
         """应用启动后调用"""
         self._log("应用已启动")
         self._log("请先开启无障碍服务")
-        self._check_service()
 
     # ══════════════════════════════════════
     # 无障碍服务管理
@@ -94,7 +92,6 @@ class MessageApp(App):
 
         try:
             from jnius import autoclass
-            # 尝试获取服务实例
             AutoSendService = autoclass('com.msg.sender.MessageAccessibilityService')
             service = AutoSendService.getInstance()
             if service is not None:
@@ -227,7 +224,6 @@ class MessageApp(App):
         if service is None:
             self._log("⚠ 无障碍服务未开启")
             self._log("尝试使用剪贴板模式")
-            # 剪贴板模式也可以用
         else:
             self._log("✓ 无障碍服务已连接")
 
@@ -276,7 +272,6 @@ class MessageApp(App):
     def _send_loop(self):
         """发送循环（在后台线程运行）"""
         pkg = APP_PACKAGES.get(self.selected_app, 'com.tencent.mm')
-        service = self._get_service()
 
         while self.is_running:
             if self.is_paused:
@@ -287,6 +282,9 @@ class MessageApp(App):
             if self.batch > 0 and self.sent_count >= self.batch:
                 Clock.schedule_once(lambda dt: self._log("已达到批量限制"), 0)
                 break
+
+            # 每次循环重新获取服务实例（用户可能中途开启了无障碍）
+            service = self._get_service()
 
             # 选择消息
             if self.selected_mode == '随机':
@@ -405,5 +403,3 @@ class MessageApp(App):
 
 if __name__ == '__main__':
     MessageApp().run()
-
-

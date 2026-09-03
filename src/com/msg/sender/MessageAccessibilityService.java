@@ -7,8 +7,6 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -139,10 +137,8 @@ public class MessageAccessibilityService extends AccessibilityService {
             openApp(pkg);
         }
 
-        // 延迟后尝试立即发送
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            tryImmediateSend();
-        }, 500);
+        // 尝试立即发送（不延迟，由Python端控制间隔）
+        tryImmediateSend();
 
         return true;
     }
@@ -432,4 +428,7 @@ public class MessageAccessibilityService extends AccessibilityService {
         return null;
     }
 }
+
+
+
 
