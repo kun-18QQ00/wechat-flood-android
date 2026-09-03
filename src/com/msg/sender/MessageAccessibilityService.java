@@ -394,8 +394,11 @@ public class MessageAccessibilityService extends AccessibilityService {
         android.graphics.Rect rect = new android.graphics.Rect();
         node.getBoundsInScreen(rect);
 
-        // 检查是否在屏幕右下角区域
-        if (rect.right > 900 && rect.bottom > 1500
+        // 检查是否在屏幕右下角区域（使用屏幕比例而非硬编码像素）
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        int screenWidth = dm.widthPixels;
+        int screenHeight = dm.heightPixels;
+        if (rect.right > screenWidth * 0.7 && rect.bottom > screenHeight * 0.7
                 && node.isClickable() && node.isVisibleToUser()) {
             CharSequence text = node.getText();
             CharSequence desc = node.getContentDescription();
@@ -429,3 +432,4 @@ public class MessageAccessibilityService extends AccessibilityService {
         return null;
     }
 }
+
