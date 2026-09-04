@@ -1,48 +1,41 @@
-# message.kv v9.3 - 柔光玻璃风格
+# message.kv v10.0 - 悬浮窗版本
 
 <GlassCard@BoxLayout>:
     orientation: 'vertical'
-    padding: dp(18)
+    padding: dp(16)
     spacing: dp(10)
     size_hint_y: None
     height: self.minimum_height
     canvas.before:
         Color:
-            rgba: 1, 1, 1, 0.65
+            rgba: 1, 1, 1, 0.75
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [dp(18)]
+            radius: [dp(16)]
 
 <RootWidget>:
     orientation: 'vertical'
     canvas.before:
-        # 渐变背景
         Color:
-            rgba: 0.42, 0.62, 0.95, 1
+            rgba: 0.4, 0.6, 0.95, 1
         Rectangle:
             pos: self.pos
             size: self.size
-        # 光晕效果
-        Color:
-            rgba: 0.6, 0.8, 1, 0.3
-        Ellipse:
-            pos: self.width * 0.3, self.height * 0.5
-            size: self.width * 0.8, self.width * 0.8
 
-    # 顶部栏
+    # 标题栏
     BoxLayout:
         size_hint_y: None
-        height: dp(60)
+        height: dp(56)
         padding: dp(16), 0
         canvas.before:
             Color:
-                rgba: 1, 1, 1, 0.2
+                rgba: 1, 1, 1, 0.15
             Rectangle:
                 pos: self.pos
                 size: self.size
         Label:
-            text: '消息助手'
+            text: '消息助手 v10'
             font_size: sp(22)
             font_name: app.font_name
             bold: True
@@ -55,60 +48,32 @@
 
         BoxLayout:
             orientation: 'vertical'
-            padding: dp(16), dp(12)
+            padding: dp(14), dp(12)
             spacing: dp(12)
             size_hint_y: None
             height: self.minimum_height
 
-            # 无障碍服务
+            # 使用说明
             GlassCard:
                 Label:
-                    text: '无障碍服务'
+                    text: '使用方法'
                     font_size: sp(15)
                     font_name: app.font_name
                     bold: True
                     color: 0.15, 0.15, 0.25, 1
                     size_hint_y: None
-                    height: dp(26)
+                    height: dp(24)
                     halign: 'left'
                     text_size: self.size
-
-                BoxLayout:
-                    size_hint_y: None
-                    height: dp(24)
-                    Label:
-                        text: '已连接' if app.service_ok else '未开启'
-                        font_size: sp(14)
-                        font_name: app.font_name
-                        color: (0.1, 0.75, 0.35, 1) if app.service_ok else (0.85, 0.3, 0.25, 1)
-                        halign: 'left'
-                        text_size: self.size
-
-                Button:
-                    text: '打开无障碍设置'
-                    font_size: sp(15)
-                    font_name: app.font_name
-                    size_hint_y: None
-                    height: dp(46)
-                    background_color: 0, 0, 0, 0
-                    color: 1, 1, 1, 1
-                    canvas.before:
-                        Color:
-                            rgba: 0.3, 0.55, 0.95, 0.9
-                        RoundedRectangle:
-                            pos: self.pos
-                            size: self.size
-                            radius: [dp(12)]
-                    on_press: app.open_settings()
-
                 Label:
-                    text: '找不到？重启APP后再试'
-                    font_size: sp(12)
+                    text: '1. 输入消息（每行一条）\n2. 点"开始"自动复制\n3. 切到聊天窗口粘贴发送\n4. 消息会按间隔自动切换'
+                    font_size: sp(14)
                     font_name: app.font_name
-                    color: 0.4, 0.4, 0.55, 1
+                    color: 0.3, 0.3, 0.4, 1
                     size_hint_y: None
-                    height: dp(18)
+                    height: dp(80)
                     halign: 'left'
+                    valign: 'top'
                     text_size: self.size
 
             # 消息输入
@@ -120,7 +85,7 @@
                     bold: True
                     color: 0.15, 0.15, 0.25, 1
                     size_hint_y: None
-                    height: dp(26)
+                    height: dp(24)
                     halign: 'left'
                     text_size: self.size
 
@@ -131,13 +96,13 @@
                     font_size: sp(17)
                     font_name: app.font_name
                     size_hint_y: None
-                    height: dp(110)
+                    height: dp(120)
                     padding: dp(12)
-                    background_color: 1, 1, 1, 0.5
+                    background_color: 1, 1, 1, 0.6
                     foreground_color: 0.1, 0.1, 0.2, 1
-                    cursor_color: 0.3, 0.55, 0.95, 1
+                    cursor_color: 0.3, 0.5, 0.95, 1
 
-            # 发送设置
+            # 设置
             GlassCard:
                 Label:
                     text: '发送设置'
@@ -146,7 +111,7 @@
                     bold: True
                     color: 0.15, 0.15, 0.25, 1
                     size_hint_y: None
-                    height: dp(26)
+                    height: dp(24)
                     halign: 'left'
                     text_size: self.size
 
@@ -154,16 +119,14 @@
                     size_hint_y: None
                     height: dp(42)
                     spacing: dp(8)
-
                     Label:
                         text: '间隔秒'
                         font_size: sp(14)
                         font_name: app.font_name
                         color: 0.25, 0.25, 0.35, 1
-                        size_hint_x: 0.22
+                        size_hint_x: 0.2
                         halign: 'left'
                         text_size: self.size
-
                     TextInput:
                         id: speed_input
                         text: '1.0'
@@ -177,7 +140,6 @@
                         foreground_color: 0.1, 0.1, 0.2, 1
                         input_filter: 'float'
                         multiline: False
-
                     Label:
                         text: '批量'
                         font_size: sp(14)
@@ -186,13 +148,12 @@
                         size_hint_x: 0.15
                         halign: 'left'
                         text_size: self.size
-
                     TextInput:
                         id: batch_input
                         text: '0'
                         font_size: sp(16)
                         font_name: app.font_name
-                        size_hint_x: 0.18
+                        size_hint_x: 0.2
                         size_hint_y: None
                         height: dp(38)
                         padding: dp(8)
@@ -200,12 +161,11 @@
                         foreground_color: 0.1, 0.1, 0.2, 1
                         input_filter: 'int'
                         multiline: False
-
                     Label:
                         text: '0=无限'
                         font_size: sp(11)
                         font_name: app.font_name
-                        color: 0.45, 0.45, 0.55, 1
+                        color: 0.5, 0.5, 0.6, 1
                         size_hint_x: 0.2
 
             # 控制
@@ -217,64 +177,60 @@
                     bold: True
                     color: 0.15, 0.15, 0.25, 1
                     size_hint_y: None
-                    height: dp(26)
+                    height: dp(24)
                     halign: 'left'
                     text_size: self.size
 
                 BoxLayout:
                     size_hint_y: None
-                    height: dp(50)
-                    spacing: dp(10)
+                    height: dp(48)
+                    spacing: dp(8)
 
                     Button:
-                        text: '开始'
-                        font_size: sp(16)
+                        text: '复制一条'
+                        font_size: sp(15)
+                        font_name: app.font_name
+                        background_color: 0, 0, 0, 0
+                        color: 1, 1, 1, 1
+                        canvas.before:
+                            Color:
+                                rgba: 0.3, 0.55, 0.95, 0.9
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(10)]
+                        on_press: app.send_once()
+
+                    Button:
+                        text: '开始自动' if not app.is_running else ('暂停' if not app.is_paused else '继续')
+                        font_size: sp(15)
                         font_name: app.font_name
                         bold: True
                         background_color: 0, 0, 0, 0
                         color: 1, 1, 1, 1
-                        disabled: app.is_running
                         canvas.before:
                             Color:
-                                rgba: (0.15, 0.72, 0.35, 0.9) if not self.disabled else (0.6, 0.6, 0.6, 0.5)
+                                rgba: (0.15, 0.72, 0.35, 0.9) if not app.is_running else ((1, 0.55, 0.1, 0.9) if app.is_paused else (1, 0.55, 0.1, 0.9))
                             RoundedRectangle:
                                 pos: self.pos
                                 size: self.size
-                                radius: [dp(12)]
-                        on_press: app.start()
-
-                    Button:
-                        text: '暂停' if not app.is_paused else '继续'
-                        font_size: sp(16)
-                        font_name: app.font_name
-                        bold: True
-                        background_color: 0, 0, 0, 0
-                        color: 1, 1, 1, 1
-                        disabled: not app.is_running
-                        canvas.before:
-                            Color:
-                                rgba: (1, 0.55, 0.1, 0.9) if not self.disabled else (0.6, 0.6, 0.6, 0.5)
-                            RoundedRectangle:
-                                pos: self.pos
-                                size: self.size
-                                radius: [dp(12)]
-                        on_press: app.pause()
+                                radius: [dp(10)]
+                        on_press: app.start() if not app.is_running else app.pause()
 
                     Button:
                         text: '停止'
-                        font_size: sp(16)
+                        font_size: sp(15)
                         font_name: app.font_name
-                        bold: True
                         background_color: 0, 0, 0, 0
                         color: 1, 1, 1, 1
                         disabled: not app.is_running
                         canvas.before:
                             Color:
-                                rgba: (0.9, 0.2, 0.2, 0.9) if not self.disabled else (0.6, 0.6, 0.6, 0.5)
+                                rgba: (0.9, 0.2, 0.2, 0.9) if not self.disabled else (0.5, 0.5, 0.5, 0.4)
                             RoundedRectangle:
                                 pos: self.pos
                                 size: self.size
-                                radius: [dp(12)]
+                                radius: [dp(10)]
                         on_press: app.stop()
 
             # 状态
@@ -298,7 +254,6 @@
                         color: 0.3, 0.55, 0.95, 1
                         halign: 'right'
                         text_size: self.size
-
                 Label:
                     text: app.speed_text
                     font_size: sp(13)
@@ -318,17 +273,16 @@
                     bold: True
                     color: 0.15, 0.15, 0.25, 1
                     size_hint_y: None
-                    height: dp(26)
+                    height: dp(24)
                     halign: 'left'
                     text_size: self.size
-
                 TextInput:
                     id: log_area
                     readonly: True
                     font_size: sp(12)
                     font_name: app.font_name
                     size_hint_y: None
-                    height: dp(140)
+                    height: dp(130)
                     padding: dp(10)
                     background_color: 0.1, 0.12, 0.2, 0.8
                     foreground_color: 0.45, 0.95, 0.65, 1

@@ -5,9 +5,9 @@ package.domain = org.msg
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json,ttf,otf,xml,html,css,js
 source.include_patterns = fonts/*,res/xml/*,assets/**
-version = 9.3.0
+version = 10.0.0
 requirements = python3,kivy,pyjnius,android
-android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,BIND_ACCESSIBILITY_SERVICE,VIBRATE,FOREGROUND_SERVICE
+android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,VIBRATE,FOREGROUND_SERVICE,SYSTEM_ALERT_WINDOW
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
@@ -18,9 +18,6 @@ fullscreen = 0
 android.allow_backup = True
 android.manifest.custom_enabled = true
 
-# 编译Java源码（无障碍服务）
-android.add_src = src
-
 # 图标
 icon.filename = %(source.dir)s/assets/icon.png
 presplash.filename = %(source.dir)s/assets/presplash.png
@@ -30,8 +27,3 @@ log_level = 2
 
 [buildozer]
 warn_on_root = 0
-
-
-
-
-

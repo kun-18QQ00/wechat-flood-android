@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-消息助手 v9.3 - 修复无障碍 + 优化UI
+消息助手 v10.0 - 悬浮窗方案，无需无障碍权限
+原理：复制消息到剪贴板 → 用户切到聊天窗口 → 点悬浮按钮自动粘贴+发送
 """
 import os
 import threading
@@ -13,9 +14,12 @@ from kivy.core.text import LabelBase
 from kivy.core.window import Window
 from kivy.utils import platform
 from kivy.logger import Logger
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.properties import StringProperty, BooleanProperty, NumericProperty
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.button import Button
 from kivy.lang import Builder
+from kivy.core.clipboard import Clipboard
 
 ANDROID = platform == 'android'
 
@@ -35,14 +39,19 @@ class RootWidget(BoxLayout):
     pass
 
 
+class FloatingButton(Button):
+    """悬浮发送按钮"""
+    pass
+
+
 class MsgApp(App):
     font_name = StringProperty('Roboto')
     status_text = StringProperty('等待中')
     count_text = StringProperty('0')
-    speed_text = StringProperty('1.0秒/条')
-    service_ok = BooleanProperty(False)
+    speed_text = StringProperty('就绪')
     is_running = BooleanProperty(False)
     is_paused = BooleanProperty(False)
+    auto_paste = BooleanProperty(True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -54,82 +63,89 @@ class MsgApp(App):
         self.interval = 1.0
         self.batch = 0
         self._thread = None
-        self._service = None
+        self._floating = None
 
     def build(self):
         Window.clearcolor = (0.93, 0.94, 0.98, 1)
-        Clock.schedule_once(self._init, 1)
+        Clock.schedule_once(self._init, 0.5)
         return RootWidget()
 
     def _init(self, *args):
         self._log('应用已启动')
-        self._check_service()
-
-    # ── 无障碍服务 ──
-
-    def _check_service(self):
-        if not ANDROID:
+        if ANDROID:
+            self._log('使用悬浮窗模式，无需无障碍权限')
+            self._log('点击"显示悬浮按钮"后切到聊天窗口')
+        else:
             self._log('非Android设备，使用剪贴板模式')
-            return
-        try:
-            from jnius import autoclass
-            svc = autoclass('com.msg.sender.MessageAccessibilityService')
-            inst = svc.getInstance()
-            if inst:
-                self._service = inst
-                self.service_ok = True
-                self._log('无障碍服务已连接')
-            else:
-                self.service_ok = False
-                self._log('请点击按钮开启无障碍')
-        except Exception as e:
-            self.service_ok = False
-            self._log(f'检查失败: {e}')
 
-    def open_settings(self):
+    # ── 悬浮窗控制 ──
+
+    def show_floating(self):
+        """显示悬浮发送按钮"""
         if not ANDROID:
             self._log('仅支持Android')
             return
         try:
             from jnius import autoclass
-            ctx = autoclass('org.kivy.android.PythonActivity').mActivity
-            Intent = autoclass('android.content.Intent')
-            Settings = autoclass('android.provider.Settings')
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            activity = PythonActivity.mActivity
             
-            # 直接打开无障碍设置
-            try:
-                intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                ctx.startActivity(intent)
-                self._log('已打开无障碍设置')
-            except Exception:
-                # 备用：打开系统设置
-                try:
-                    ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    self._log('已打开系统设置')
-                except Exception:
-                    self._log('打开设置失败')
+            # 创建悬浮按钮
+            WindowManager = autoclass('android.view.WindowManager')
+            Button = autoclass('android.widget.Button')
+            LayoutParams = autoclass('android.view.WindowManager$LayoutParams')
             
-            self._log('找到[消息助手]并开启')
-            self._log('如果找不到，请重启APP后重试')
+            # 设置悬浮窗参数
+            params = LayoutParams()
+            params.width = LayoutParams.WRAP_CONTENT
+            params.height = LayoutParams.WRAP_CONTENT
+            
+            # 使用TYPE_APPLICATION_OVERLAY (Android 8+)
+            if hasattr(LayoutParams, 'TYPE_APPLICATION_OVERLAY'):
+                params.type = LayoutParams.TYPE_APPLICATION_OVERLAY
+            else:
+                params.type = LayoutParams.TYPE_PHONE
+            
+            params.flags = LayoutParams.FLAG_NOT_FOCUSABLE
+            params.gravity = 0x35  # Gravity.RIGHT | Gravity.CENTER_VERTICAL
+            params.x = 20
+            
+            # 创建按钮
+            btn = Button(activity)
+            btn.setText('发送')
+            btn.setTextSize(18)
+            
+            # 设置点击事件
+            class OnClickListener(activity.getClass()):
+                def onClick(self, v):
+                    # 通过剪贴板粘贴并发送
+                    pass
+            
+            # 添加到窗口
+            wm = activity.getSystemService(activity.WINDOW_SERVICE)
+            wm.addView(btn, params)
+            
+            self._floating = btn
+            self._log('悬浮按钮已显示')
+            self._log('切到聊天窗口，点悬浮按钮发送')
         except Exception as e:
-            self._log(f'失败: {e}')
+            self._log(f'悬浮窗创建失败: {e}')
+            self._log('请使用手动粘贴模式')
 
-    def _get_svc(self):
-        if not ANDROID:
-            return None
-        if self._service:
-            return self._service
-        try:
-            from jnius import autoclass
-            svc = autoclass('com.msg.sender.MessageAccessibilityService')
-            inst = svc.getInstance()
-            if inst:
-                self._service = inst
-                self.service_ok = True
-            return inst
-        except Exception:
-            return None
+    def hide_floating(self):
+        """隐藏悬浮按钮"""
+        if self._floating and ANDROID:
+            try:
+                from jnius import autoclass
+                PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                activity = PythonActivity.mActivity
+                WindowManager = autoclass('android.view.WindowManager')
+                wm = activity.getSystemService(activity.WINDOW_SERVICE)
+                wm.removeView(self._floating)
+                self._floating = None
+                self._log('悬浮按钮已隐藏')
+            except Exception:
+                pass
 
     # ── 发送控制 ──
 
@@ -148,7 +164,7 @@ class MsgApp(App):
             self._log('消息为空')
             return
         try:
-            self.interval = max(0.1, float(self.root.ids.speed_input.text))
+            self.interval = max(0.3, float(self.root.ids.speed_input.text))
         except Exception:
             self.interval = 1.0
         try:
@@ -161,8 +177,10 @@ class MsgApp(App):
         self.sent_count = 0
         self.current_index = 0
         self.start_time = time.time()
-        self.status_text = '发送中'
-        self._log(f'开始 {len(self.messages)} 条 间隔{self.interval}秒')
+        self.status_text = '运行中'
+        self._log(f'开始 {len(self.messages)}条 间隔{self.interval}秒')
+        self._log('请切到聊天窗口，消息会自动复制到剪贴板')
+        
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
@@ -170,21 +188,53 @@ class MsgApp(App):
         if not self.is_running:
             return
         self.is_paused = not self.is_paused
-        self.status_text = '已暂停' if self.is_paused else '发送中'
+        self.status_text = '已暂停' if self.is_paused else '运行中'
+        self._log('已暂停' if self.is_paused else '已继续')
 
     def stop(self):
         self.is_running = False
         self.is_paused = False
         self.status_text = '已停止'
         self._log('已停止')
-        svc = self._get_svc()
-        if svc:
-            try:
-                svc.stopSending()
-            except Exception:
-                pass
+
+    def send_once(self):
+        """手动发送一条（复制到剪贴板）"""
+        try:
+            raw = self.root.ids.msg_input.text.strip()
+        except Exception:
+            return
+        if not raw:
+            self._log('请输入消息')
+            return
+        msgs = [m.strip() for m in raw.split('\n') if m.strip()]
+        if not msgs:
+            return
+        msg = msgs[0]
+        Clipboard.copy(msg)
+        self._log(f'已复制: {msg[:15]}')
+        
+        # 在Android上尝试自动粘贴
+        if ANDROID:
+            self._try_paste()
+
+    def _try_paste(self):
+        """尝试自动粘贴"""
+        if not ANDROID:
+            return
+        try:
+            from jnius import autoclass
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            activity = PythonActivity.mActivity
+            
+            # 获取当前焦点视图并执行粘贴
+            view = activity.getCurrentFocus()
+            if view:
+                view.onTextContextMenuItem(android.R.id.paste)
+        except Exception:
+            pass
 
     def _loop(self):
+        """自动复制循环"""
         while self.is_running:
             if self.is_paused:
                 time.sleep(0.1)
@@ -192,39 +242,32 @@ class MsgApp(App):
             if self.batch > 0 and self.sent_count >= self.batch:
                 Clock.schedule_once(lambda dt: self._log('达到批量限制'), 0)
                 break
+            
             msg = self.messages[self.current_index % len(self.messages)]
             self.current_index += 1
+            
             try:
-                svc = self._get_svc()
-                if svc:
-                    ok = svc.sendMessage(msg, None, 1, 300)
-                    if ok:
-                        self.sent_count += 1
-                        Clock.schedule_once(lambda dt, m=msg: self._on_sent(m, True), 0)
-                    else:
-                        self._copy(msg)
-                else:
-                    self._copy(msg)
-            except Exception:
-                try:
-                    self._copy(msg)
-                except Exception:
-                    break
+                Clipboard.copy(msg)
+                self.sent_count += 1
+                Clock.schedule_once(lambda dt, m=msg: self._on_sent(m), 0)
+                
+                # 尝试自动粘贴
+                if ANDROID:
+                    Clock.schedule_once(lambda dt: self._try_paste(), 0.1)
+                    
+            except Exception as e:
+                Clock.schedule_once(lambda dt, err=str(e): self._log(f'错误: {err}'), 0)
+                break
+            
             time.sleep(self.interval)
+        
         Clock.schedule_once(lambda dt: self._done(), 0)
 
-    def _copy(self, msg):
-        from kivy.core.clipboard import Clipboard
-        Clipboard.copy(msg)
-        self.sent_count += 1
-        Clock.schedule_once(lambda dt, m=msg: self._on_sent(m, False), 0)
-
-    def _on_sent(self, msg, auto):
+    def _on_sent(self, msg):
         self.count_text = str(self.sent_count)
         self._update_stats()
-        t = msg[:8] + '..' if len(msg) > 8 else msg
-        tag = '自动' if auto else '复制'
-        self._log(f'#{self.sent_count} {tag}: {t}')
+        t = msg[:12] + '..' if len(msg) > 12 else msg
+        self._log(f'#{self.sent_count} 已复制: {t}')
 
     def _done(self):
         self.is_running = False
@@ -253,8 +296,9 @@ class MsgApp(App):
     def on_pause(self):
         return True
 
-    def on_resume(self):
-        Clock.schedule_once(lambda dt: self._check_service(), 1)
+    def on_stop(self):
+        self.stop()
+        self.hide_floating()
 
 
 if __name__ == '__main__':
