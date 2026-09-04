@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-消息助手 v9.0 - 全自动聊天框识别发送
+消息助手 v9.2 - 柔光玻璃UI + 小米无障碍兼容
 """
 import os
 import threading
@@ -13,16 +13,14 @@ from kivy.core.text import LabelBase
 from kivy.core.window import Window
 from kivy.utils import platform
 from kivy.logger import Logger
-from kivy.properties import StringProperty, BooleanProperty, NumericProperty
+from kivy.properties import StringProperty, BooleanProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 
 ANDROID = platform == 'android'
 
-# 加载KV
 Builder.load_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'message.kv'))
 
-# 字体
 FONT_NAME = 'Roboto'
 try:
     fp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'chinese.ttf')
@@ -59,7 +57,7 @@ class MsgApp(App):
         self._service = None
 
     def build(self):
-        Window.clearcolor = (0.96, 0.96, 0.96, 1)
+        Window.clearcolor = (0.94, 0.95, 0.98, 1)
         Clock.schedule_once(self._init, 0.5)
         return RootWidget()
 
@@ -83,12 +81,13 @@ class MsgApp(App):
                 self._log('无障碍服务已连接')
             else:
                 self.service_ok = False
-                self._log('请点击下方按钮开启无障碍服务')
+                self._log('请点击按钮开启无障碍服务')
         except Exception as e:
             self.service_ok = False
-            self._log(f'无障碍检查失败: {e}')
+            self._log(f'检查失败: {e}')
 
     def open_settings(self):
+        """打开无障碍设置 - 兼容小米MIUI"""
         if not ANDROID:
             self._log('仅支持Android')
             return
@@ -97,8 +96,38 @@ class MsgApp(App):
             ctx = autoclass('org.kivy.android.PythonActivity').mActivity
             Intent = autoclass('android.content.Intent')
             Settings = autoclass('android.provider.Settings')
-            ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            self._log('请找到[消息助手]并开启')
+
+            # 尝试多种方式打开无障碍设置
+            intents = [
+                # 标准Android无障碍设置
+                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+                # 小米MIUI无障碍设置
+                Intent().setClassName('com.miui.securitycenter', 'com.miui.permcenter.AccessibilityActivity'),
+                Intent().setClassName('com.miui.securitycenter', 'com.miui.permcenter.settings.AccessibilitySettingsActivity'),
+                # 小米设置中的无障碍
+                Intent().setClassName('com.android.settings', 'com.android.settings.AccessibilitySettings'),
+            ]
+
+            opened = False
+            for intent in intents:
+                try:
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    ctx.startActivity(intent)
+                    opened = True
+                    self._log('已打开无障碍设置')
+                    break
+                except Exception:
+                    continue
+
+            if not opened:
+                # 最后尝试通用设置
+                try:
+                    ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    self._log('已打开系统设置，请手动找到无障碍')
+                except Exception:
+                    self._log('打开设置失败')
+
+            self._log('请找到[消息助手自动发送]并开启')
         except Exception as e:
             self._log(f'打开失败: {e}')
 

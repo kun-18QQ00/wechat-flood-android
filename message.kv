@@ -1,6 +1,6 @@
-# message.kv v9.1 - 美化版
+# message.kv v9.2 - 柔光玻璃风格
 
-<Card@BoxLayout>:
+<GlassCard@BoxLayout>:
     orientation: 'vertical'
     padding: dp(16)
     spacing: dp(10)
@@ -8,29 +8,56 @@
     height: self.minimum_height
     canvas.before:
         Color:
-            rgba: 1, 1, 1, 1
+            rgba: 1, 1, 1, 0.72
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [dp(14)]
+            radius: [dp(16)]
+        Color:
+            rgba: 1, 1, 1, 0.3
+        RoundedRectangle:
+            pos: self.x + dp(1), self.y + dp(1)
+            size: self.size
+            radius: [dp(16)]
+
+<GlassButton@Button>:
+    font_size: sp(17)
+    font_name: app.font_name
+    bold: True
+    background_color: 0, 0, 0, 0
+    color: 1, 1, 1, 1
+    canvas.before:
+        Color:
+            rgba: self.bg_color if hasattr(self, 'bg_color') else (0.2, 0.45, 1, 0.85)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(12)]
 
 <RootWidget>:
     orientation: 'vertical'
     canvas.before:
+        # 柔光渐变背景
         Color:
-            rgba: 0.94, 0.95, 0.97, 1
+            rgba: 0.55, 0.75, 1, 1
         Rectangle:
             pos: self.pos
             size: self.size
+        # 半透明遮罩层
+        Color:
+            rgba: 1, 1, 1, 0.25
+        Rectangle:
+            pos: self.x, self.y + self.height * 0.4
+            size: self.width, self.height * 0.6
 
-    # 顶部标题栏
+    # 顶部标题栏 - 毛玻璃效果
     BoxLayout:
         size_hint_y: None
-        height: dp(60)
+        height: dp(64)
         padding: dp(16), 0
         canvas.before:
             Color:
-                rgba: 0.2, 0.45, 1, 1
+                rgba: 1, 1, 1, 0.3
             Rectangle:
                 pos: self.pos
                 size: self.size
@@ -39,7 +66,7 @@
             font_size: sp(24)
             font_name: app.font_name
             bold: True
-            color: 1, 1, 1, 1
+            color: 0.1, 0.1, 0.2, 1
             halign: 'center'
             text_size: self.size
 
@@ -54,26 +81,26 @@
             height: self.minimum_height
 
             # 无障碍服务
-            Card:
+            GlassCard:
                 Label:
                     text: '无障碍服务'
-                    font_size: sp(17)
+                    font_size: sp(16)
                     font_name: app.font_name
                     bold: True
-                    color: 0.1, 0.1, 0.15, 1
+                    color: 0.1, 0.1, 0.2, 1
                     size_hint_y: None
-                    height: dp(30)
+                    height: dp(28)
                     halign: 'left'
                     text_size: self.size
 
                 BoxLayout:
                     size_hint_y: None
-                    height: dp(30)
+                    height: dp(26)
                     Label:
                         text: '已连接' if app.service_ok else '未开启'
                         font_size: sp(15)
                         font_name: app.font_name
-                        color: (0, 0.65, 0.2, 1) if app.service_ok else (0.85, 0.2, 0.1, 1)
+                        color: (0, 0.7, 0.3, 1) if app.service_ok else (0.9, 0.25, 0.2, 1)
                         halign: 'left'
                         text_size: self.size
 
@@ -83,69 +110,76 @@
                     font_name: app.font_name
                     size_hint_y: None
                     height: dp(48)
-                    background_color: 0.2, 0.45, 1, 1
+                    background_color: 0, 0, 0, 0
                     color: 1, 1, 1, 1
+                    canvas.before:
+                        Color:
+                            rgba: 0.2, 0.45, 1, 0.85
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12)]
                     on_press: app.open_settings()
 
                 Label:
-                    text: '开启后自动识别任意聊天框发送消息'
-                    font_size: sp(13)
+                    text: '小米手机请在设置中搜索"无障碍"'
+                    font_size: sp(12)
                     font_name: app.font_name
-                    color: 0.45, 0.45, 0.5, 1
+                    color: 0.3, 0.3, 0.4, 1
                     size_hint_y: None
-                    height: dp(22)
+                    height: dp(20)
                     halign: 'left'
                     text_size: self.size
 
             # 消息输入
-            Card:
+            GlassCard:
                 Label:
                     text: '消息内容'
-                    font_size: sp(17)
+                    font_size: sp(16)
                     font_name: app.font_name
                     bold: True
-                    color: 0.1, 0.1, 0.15, 1
+                    color: 0.1, 0.1, 0.2, 1
                     size_hint_y: None
-                    height: dp(30)
+                    height: dp(28)
                     halign: 'left'
                     text_size: self.size
 
                 TextInput:
                     id: msg_input
-                    hint_text: '输入要发送的消息，每行一条'
+                    hint_text: '输入消息，每行一条'
                     multiline: True
                     font_size: sp(18)
                     font_name: app.font_name
                     size_hint_y: None
-                    height: dp(130)
+                    height: dp(120)
                     padding: dp(14)
-                    background_color: 0.95, 0.95, 0.97, 1
-                    foreground_color: 0.1, 0.1, 0.15, 1
+                    background_color: 1, 1, 1, 0.6
+                    foreground_color: 0.1, 0.1, 0.2, 1
                     cursor_color: 0.2, 0.45, 1, 1
 
             # 发送设置
-            Card:
+            GlassCard:
                 Label:
                     text: '发送设置'
-                    font_size: sp(17)
+                    font_size: sp(16)
                     font_name: app.font_name
                     bold: True
-                    color: 0.1, 0.1, 0.15, 1
+                    color: 0.1, 0.1, 0.2, 1
                     size_hint_y: None
-                    height: dp(30)
+                    height: dp(28)
                     halign: 'left'
                     text_size: self.size
 
                 BoxLayout:
                     size_hint_y: None
-                    height: dp(48)
-                    spacing: dp(10)
+                    height: dp(44)
+                    spacing: dp(8)
 
                     Label:
                         text: '间隔(秒)'
-                        font_size: sp(16)
+                        font_size: sp(15)
                         font_name: app.font_name
-                        color: 0.25, 0.25, 0.3, 1
+                        color: 0.2, 0.2, 0.3, 1
                         size_hint_x: 0.28
                         halign: 'left'
                         text_size: self.size
@@ -153,22 +187,22 @@
                     TextInput:
                         id: speed_input
                         text: '1.0'
-                        font_size: sp(18)
+                        font_size: sp(17)
                         font_name: app.font_name
                         size_hint_x: 0.22
                         size_hint_y: None
-                        height: dp(44)
-                        padding: dp(10)
-                        background_color: 0.95, 0.95, 0.97, 1
-                        foreground_color: 0.1, 0.1, 0.15, 1
+                        height: dp(40)
+                        padding: dp(8)
+                        background_color: 1, 1, 1, 0.5
+                        foreground_color: 0.1, 0.1, 0.2, 1
                         input_filter: 'float'
                         multiline: False
 
                     Label:
                         text: '批量'
-                        font_size: sp(16)
+                        font_size: sp(15)
                         font_name: app.font_name
-                        color: 0.25, 0.25, 0.3, 1
+                        color: 0.2, 0.2, 0.3, 1
                         size_hint_x: 0.15
                         halign: 'left'
                         text_size: self.size
@@ -176,90 +210,111 @@
                     TextInput:
                         id: batch_input
                         text: '0'
-                        font_size: sp(18)
+                        font_size: sp(17)
                         font_name: app.font_name
                         size_hint_x: 0.15
                         size_hint_y: None
-                        height: dp(44)
-                        padding: dp(10)
-                        background_color: 0.95, 0.95, 0.97, 1
-                        foreground_color: 0.1, 0.1, 0.15, 1
+                        height: dp(40)
+                        padding: dp(8)
+                        background_color: 1, 1, 1, 0.5
+                        foreground_color: 0.1, 0.1, 0.2, 1
                         input_filter: 'int'
                         multiline: False
 
                     Label:
                         text: '0=无限'
-                        font_size: sp(13)
+                        font_size: sp(12)
                         font_name: app.font_name
-                        color: 0.5, 0.5, 0.55, 1
+                        color: 0.4, 0.4, 0.5, 1
                         size_hint_x: 0.2
 
             # 控制按钮
-            Card:
+            GlassCard:
                 Label:
                     text: '控制'
-                    font_size: sp(17)
+                    font_size: sp(16)
                     font_name: app.font_name
                     bold: True
-                    color: 0.1, 0.1, 0.15, 1
+                    color: 0.1, 0.1, 0.2, 1
                     size_hint_y: None
-                    height: dp(30)
+                    height: dp(28)
                     halign: 'left'
                     text_size: self.size
 
                 BoxLayout:
                     size_hint_y: None
-                    height: dp(54)
-                    spacing: dp(12)
+                    height: dp(52)
+                    spacing: dp(10)
 
                     Button:
                         text: '开始发送'
-                        font_size: sp(18)
+                        font_size: sp(17)
                         font_name: app.font_name
                         bold: True
-                        background_color: 0, 0.72, 0.3, 1
+                        background_color: 0, 0, 0, 0
                         color: 1, 1, 1, 1
                         disabled: app.is_running
+                        canvas.before:
+                            Color:
+                                rgba: (0, 0.72, 0.3, 0.9) if not self.disabled else (0.5, 0.5, 0.5, 0.5)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(12)]
                         on_press: app.start()
 
                     Button:
                         text: '暂停' if not app.is_paused else '继续'
-                        font_size: sp(18)
+                        font_size: sp(17)
                         font_name: app.font_name
                         bold: True
-                        background_color: 1, 0.58, 0, 1
+                        background_color: 0, 0, 0, 0
                         color: 1, 1, 1, 1
                         disabled: not app.is_running
+                        canvas.before:
+                            Color:
+                                rgba: (1, 0.58, 0, 0.9) if not self.disabled else (0.5, 0.5, 0.5, 0.5)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(12)]
                         on_press: app.pause()
 
                     Button:
                         text: '停止'
-                        font_size: sp(18)
+                        font_size: sp(17)
                         font_name: app.font_name
                         bold: True
-                        background_color: 0.9, 0.18, 0.15, 1
+                        background_color: 0, 0, 0, 0
                         color: 1, 1, 1, 1
                         disabled: not app.is_running
+                        canvas.before:
+                            Color:
+                                rgba: (0.9, 0.18, 0.15, 0.9) if not self.disabled else (0.5, 0.5, 0.5, 0.5)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(12)]
                         on_press: app.stop()
 
             # 状态
-            Card:
+            GlassCard:
                 BoxLayout:
                     size_hint_y: None
-                    height: dp(40)
+                    height: dp(38)
 
                     Label:
                         text: app.status_text
-                        font_size: sp(18)
+                        font_size: sp(17)
                         font_name: app.font_name
                         bold: True
-                        color: 0.1, 0.1, 0.15, 1
+                        color: 0.1, 0.1, 0.2, 1
                         halign: 'left'
                         text_size: self.size
 
                     Label:
                         text: app.count_text
-                        font_size: sp(30)
+                        font_size: sp(28)
                         font_name: app.font_name
                         bold: True
                         color: 0.2, 0.45, 1, 1
@@ -268,35 +323,35 @@
 
                 Label:
                     text: app.speed_text
-                    font_size: sp(14)
+                    font_size: sp(13)
                     font_name: app.font_name
-                    color: 0.45, 0.45, 0.5, 1
+                    color: 0.4, 0.4, 0.5, 1
                     size_hint_y: None
-                    height: dp(22)
+                    height: dp(20)
                     halign: 'left'
                     text_size: self.size
 
             # 日志
-            Card:
+            GlassCard:
                 Label:
                     text: '日志'
-                    font_size: sp(17)
+                    font_size: sp(16)
                     font_name: app.font_name
                     bold: True
-                    color: 0.1, 0.1, 0.15, 1
+                    color: 0.1, 0.1, 0.2, 1
                     size_hint_y: None
-                    height: dp(30)
+                    height: dp(28)
                     halign: 'left'
                     text_size: self.size
 
                 TextInput:
                     id: log_area
                     readonly: True
-                    font_size: sp(14)
+                    font_size: sp(13)
                     font_name: app.font_name
                     size_hint_y: None
-                    height: dp(180)
-                    padding: dp(12)
-                    background_color: 0.12, 0.13, 0.18, 1
-                    foreground_color: 0.3, 1, 0.5, 1
+                    height: dp(160)
+                    padding: dp(10)
+                    background_color: 0.1, 0.1, 0.15, 0.75
+                    foreground_color: 0.4, 1, 0.6, 1
                     cursor_color: 0, 0, 0, 0
