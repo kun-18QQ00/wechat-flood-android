@@ -32,6 +32,8 @@
 
         <service
             android:name="com.msg.sender.MessageAccessibilityService"
+            android:label="消息助手自动发送"
+            android:icon="@drawable/icon"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
