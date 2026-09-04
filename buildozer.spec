@@ -5,7 +5,7 @@ package.domain = org.msg
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json,ttf,otf,xml,html,css,js
 source.include_patterns = fonts/*,res/xml/*,assets/**
-version = 9.2.0
+version = 9.3.0
 requirements = python3,kivy,pyjnius,android
 android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,BIND_ACCESSIBILITY_SERVICE,VIBRATE,FOREGROUND_SERVICE
 android.api = 33
@@ -30,6 +30,7 @@ log_level = 2
 
 [buildozer]
 warn_on_root = 0
+
 
 
 

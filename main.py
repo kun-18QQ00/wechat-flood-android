@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-消息助手 v9.2 - 柔光玻璃UI + 小米无障碍兼容
+消息助手 v9.3 - 修复无障碍 + 优化UI
 """
 import os
 import threading
@@ -57,8 +57,8 @@ class MsgApp(App):
         self._service = None
 
     def build(self):
-        Window.clearcolor = (0.94, 0.95, 0.98, 1)
-        Clock.schedule_once(self._init, 0.5)
+        Window.clearcolor = (0.93, 0.94, 0.98, 1)
+        Clock.schedule_once(self._init, 1)
         return RootWidget()
 
     def _init(self, *args):
@@ -81,13 +81,12 @@ class MsgApp(App):
                 self._log('无障碍服务已连接')
             else:
                 self.service_ok = False
-                self._log('请点击按钮开启无障碍服务')
+                self._log('请点击按钮开启无障碍')
         except Exception as e:
             self.service_ok = False
             self._log(f'检查失败: {e}')
 
     def open_settings(self):
-        """打开无障碍设置 - 兼容小米MIUI"""
         if not ANDROID:
             self._log('仅支持Android')
             return
@@ -96,40 +95,25 @@ class MsgApp(App):
             ctx = autoclass('org.kivy.android.PythonActivity').mActivity
             Intent = autoclass('android.content.Intent')
             Settings = autoclass('android.provider.Settings')
-
-            # 尝试多种方式打开无障碍设置
-            intents = [
-                # 标准Android无障碍设置
-                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
-                # 小米MIUI无障碍设置
-                Intent().setClassName('com.miui.securitycenter', 'com.miui.permcenter.AccessibilityActivity'),
-                Intent().setClassName('com.miui.securitycenter', 'com.miui.permcenter.settings.AccessibilitySettingsActivity'),
-                # 小米设置中的无障碍
-                Intent().setClassName('com.android.settings', 'com.android.settings.AccessibilitySettings'),
-            ]
-
-            opened = False
-            for intent in intents:
-                try:
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    ctx.startActivity(intent)
-                    opened = True
-                    self._log('已打开无障碍设置')
-                    break
-                except Exception:
-                    continue
-
-            if not opened:
-                # 最后尝试通用设置
+            
+            # 直接打开无障碍设置
+            try:
+                intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(intent)
+                self._log('已打开无障碍设置')
+            except Exception:
+                # 备用：打开系统设置
                 try:
                     ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    self._log('已打开系统设置，请手动找到无障碍')
+                    self._log('已打开系统设置')
                 except Exception:
                     self._log('打开设置失败')
-
-            self._log('请找到[消息助手自动发送]并开启')
+            
+            self._log('找到[消息助手]并开启')
+            self._log('如果找不到，请重启APP后重试')
         except Exception as e:
-            self._log(f'打开失败: {e}')
+            self._log(f'失败: {e}')
 
     def _get_svc(self):
         if not ANDROID:
@@ -177,8 +161,8 @@ class MsgApp(App):
         self.sent_count = 0
         self.current_index = 0
         self.start_time = time.time()
-        self.status_text = '发送中...'
-        self._log(f'开始 {len(self.messages)} 条，间隔 {self.interval}秒')
+        self.status_text = '发送中'
+        self._log(f'开始 {len(self.messages)} 条 间隔{self.interval}秒')
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
@@ -186,7 +170,7 @@ class MsgApp(App):
         if not self.is_running:
             return
         self.is_paused = not self.is_paused
-        self.status_text = '已暂停' if self.is_paused else '发送中...'
+        self.status_text = '已暂停' if self.is_paused else '发送中'
 
     def stop(self):
         self.is_running = False
@@ -248,7 +232,7 @@ class MsgApp(App):
         self.status_text = '完成'
         self._update_stats()
         e = time.time() - self.start_time if self.start_time else 0
-        self._log(f'完成 {self.sent_count} 条 {e:.0f}秒')
+        self._log(f'完成 {self.sent_count}条 {e:.0f}秒')
 
     def _update_stats(self):
         if self.start_time:
