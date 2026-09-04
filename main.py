@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-消息助手 v8.1 - 修复空白屏幕
+消息助手 v9.0 - 全自动聊天框识别发送
 """
 import os
 import threading
 import time
-import random
 from datetime import datetime
 
 from kivy.app import App
@@ -14,55 +13,36 @@ from kivy.core.text import LabelBase
 from kivy.core.window import Window
 from kivy.utils import platform
 from kivy.logger import Logger
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.properties import StringProperty, BooleanProperty, NumericProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.lang import Builder
 
 ANDROID = platform == 'android'
 
-# ── 加载KV文件 ──
-KV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'message.kv')
-if os.path.exists(KV_PATH):
-    Builder.load_file(KV_PATH)
-    Logger.info('KV文件加载成功')
-else:
-    Logger.error(f'KV文件不存在: {KV_PATH}')
+# 加载KV
+Builder.load_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'message.kv'))
 
-# ── 字体注册 ──
+# 字体
 FONT_NAME = 'Roboto'
 try:
-    font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'chinese.ttf')
-    if os.path.exists(font_path):
-        LabelBase.register(name='CN', fn_regular=font_path)
+    fp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'chinese.ttf')
+    if os.path.exists(fp):
+        LabelBase.register(name='CN', fn_regular=fp)
         FONT_NAME = 'CN'
-        Logger.info('中文字体加载成功')
-    else:
-        Logger.warning(f'字体文件不存在: {font_path}')
-except Exception as e:
-    Logger.warning(f'字体加载失败: {e}')
-
-# ── 应用包名映射 ──
-APP_PACKAGES = {
-    '微信': 'com.tencent.mm',
-    'QQ': 'com.tencent.mobileqq',
-    '钉钉': 'com.alibaba.android.rimet',
-    '飞书': 'com.ss.android.lark',
-    'Telegram': 'org.telegram.messenger',
-    'WhatsApp': 'com.whatsapp',
-}
-
-
-class RootWidget(BoxLayout):
-    """根组件"""
+except Exception:
     pass
 
 
-class MessageApp(App):
+class RootWidget(BoxLayout):
+    pass
+
+
+class MsgApp(App):
     font_name = StringProperty('Roboto')
-    status_text = StringProperty('就绪')
+    status_text = StringProperty('等待中')
     count_text = StringProperty('0')
-    stats_text = StringProperty('速度: 0 条/秒 | 耗时: 0 秒')
-    service_status = StringProperty('检查中...')
+    speed_text = StringProperty('1.0秒/条')
+    service_ok = BooleanProperty(False)
     is_running = BooleanProperty(False)
     is_paused = BooleanProperty(False)
 
@@ -73,139 +53,93 @@ class MessageApp(App):
         self.sent_count = 0
         self.current_index = 0
         self.start_time = None
-        self.selected_app = '微信'
-        self.selected_mode = '顺序'
         self.interval = 1.0
         self.batch = 0
-        self._send_thread = None
-        self._accessibility_service = None
+        self._thread = None
+        self._service = None
 
     def build(self):
-        Window.clearcolor = (0.949, 0.949, 0.969, 1)
-        root = RootWidget()
-        Clock.schedule_once(self._check_service, 1)
-        return root
+        Window.clearcolor = (0.96, 0.96, 0.96, 1)
+        Clock.schedule_once(self._init, 0.5)
+        return RootWidget()
 
-    def on_start(self):
-        self._log("应用已启动")
-        if ANDROID:
-            self._log("请先开启无障碍服务")
-        else:
-            self._log("非Android环境，使用剪贴板模式")
+    def _init(self, *args):
+        self._log('应用已启动')
+        self._check_service()
 
-    # ══════════════════════════════════════
-    # 无障碍服务管理
-    # ══════════════════════════════════════
+    # ── 无障碍服务 ──
 
-    def _check_service(self, *args):
+    def _check_service(self):
         if not ANDROID:
-            self.service_status = '仅支持Android'
+            self._log('非Android设备，使用剪贴板模式')
             return
         try:
             from jnius import autoclass
-            AutoSendService = autoclass('com.msg.sender.MessageAccessibilityService')
-            service = AutoSendService.getInstance()
-            if service is not None:
-                self.service_status = '已连接'
-                self._accessibility_service = service
-                self._log("无障碍服务已连接")
+            svc = autoclass('com.msg.sender.MessageAccessibilityService')
+            inst = svc.getInstance()
+            if inst:
+                self._service = inst
+                self.service_ok = True
+                self._log('无障碍服务已连接')
             else:
-                self.service_status = '未开启'
-                self._log("请开启无障碍服务")
+                self.service_ok = False
+                self._log('请点击下方按钮开启无障碍服务')
         except Exception as e:
-            self.service_status = '未开启'
-            Logger.warning(f'无障碍检查失败: {e}')
+            self.service_ok = False
+            self._log(f'无障碍检查失败: {e}')
 
-    def open_accessibility_settings(self):
+    def open_settings(self):
         if not ANDROID:
-            self._log("仅支持Android设备")
+            self._log('仅支持Android')
             return
         try:
             from jnius import autoclass
+            ctx = autoclass('org.kivy.android.PythonActivity').mActivity
             Intent = autoclass('android.content.Intent')
             Settings = autoclass('android.provider.Settings')
-            PythonActivity = autoclass('org.kivy.android.PythonActivity')
-            intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            PythonActivity.mActivity.startActivity(intent)
-            self._log("已打开无障碍设置")
+            ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            self._log('请找到[消息助手]并开启')
         except Exception as e:
-            self._log(f"打开设置失败: {e}")
+            self._log(f'打开失败: {e}')
 
-    def _get_service(self):
+    def _get_svc(self):
         if not ANDROID:
             return None
-        if self._accessibility_service is not None:
-            return self._accessibility_service
+        if self._service:
+            return self._service
         try:
             from jnius import autoclass
-            AutoSendService = autoclass('com.msg.sender.MessageAccessibilityService')
-            service = AutoSendService.getInstance()
-            if service is not None:
-                self._accessibility_service = service
-            return service
+            svc = autoclass('com.msg.sender.MessageAccessibilityService')
+            inst = svc.getInstance()
+            if inst:
+                self._service = inst
+                self.service_ok = True
+            return inst
         except Exception:
             return None
 
-    # ══════════════════════════════════════
-    # UI 操作回调
-    # ══════════════════════════════════════
+    # ── 发送控制 ──
 
-    def load_preset(self, preset_type):
-        try:
-            presets = {
-                'emoji': "😀\n😂\n🤣\n😍\n🥰\n😎",
-                'greeting': "你好\n早上好\n中午好\n晚上好",
-                'numbers': "1\n2\n3\n4\n5\n6\n7\n8\n9\n10",
-            }
-            text = presets.get(preset_type, '')
-            if text:
-                self.root.ids.msg_input.text = text
-                self._log(f"已加载预设: {preset_type}")
-        except Exception as e:
-            self._log(f"加载预设失败: {e}")
-
-    def _update_char_count(self):
-        try:
-            text = self.root.ids.msg_input.text
-            self.root.ids.char_count.text = f'{len(text)} 字符'
-        except Exception:
-            pass
-
-    def select_app(self, app_name):
-        self.selected_app = app_name
-        self._log(f"已选择: {app_name}")
-
-    def select_mode(self, mode):
-        self.selected_mode = mode
-        self._log(f"模式: {mode}")
-
-    def start_sending(self):
+    def start(self):
         if self.is_running:
             return
-
         try:
-            raw_text = self.root.ids.msg_input.text.strip()
+            raw = self.root.ids.msg_input.text.strip()
         except Exception:
-            raw_text = ''
-
-        if not raw_text:
-            self._log("请输入消息内容")
+            raw = ''
+        if not raw:
+            self._log('请输入消息')
             return
-
-        self.messages = [m.strip() for m in raw_text.split('\n') if m.strip()]
+        self.messages = [m.strip() for m in raw.split('\n') if m.strip()]
         if not self.messages:
-            self._log("消息内容为空")
+            self._log('消息为空')
             return
-
         try:
-            speed_text = self.root.ids.speed_input.text
-            self.interval = max(0.1, float(speed_text))
+            self.interval = max(0.1, float(self.root.ids.speed_input.text))
         except Exception:
             self.interval = 1.0
-
         try:
-            batch_text = self.root.ids.batch_input.text
-            self.batch = int(batch_text) if batch_text else 0
+            self.batch = int(self.root.ids.batch_input.text or '0')
         except Exception:
             self.batch = 0
 
@@ -214,70 +148,59 @@ class MessageApp(App):
         self.sent_count = 0
         self.current_index = 0
         self.start_time = time.time()
-        self.status_text = '运行中...'
+        self.status_text = '发送中...'
+        self._log(f'开始 {len(self.messages)} 条，间隔 {self.interval}秒')
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
 
-        self._log(f"开始发送 {len(self.messages)} 条消息")
-        self._send_thread = threading.Thread(target=self._send_loop, daemon=True)
-        self._send_thread.start()
-
-    def pause_sending(self):
+    def pause(self):
         if not self.is_running:
             return
         self.is_paused = not self.is_paused
-        self.status_text = '已暂停' if self.is_paused else '运行中...'
-        self._log("已暂停" if self.is_paused else "已继续")
+        self.status_text = '已暂停' if self.is_paused else '发送中...'
 
-    def stop_sending(self):
+    def stop(self):
         self.is_running = False
         self.is_paused = False
         self.status_text = '已停止'
-        self._log("已停止")
-        service = self._get_service()
-        if service:
+        self._log('已停止')
+        svc = self._get_svc()
+        if svc:
             try:
-                service.stopSending()
+                svc.stopSending()
             except Exception:
                 pass
 
-    def _send_loop(self):
-        pkg = APP_PACKAGES.get(self.selected_app, 'com.tencent.mm')
+    def _loop(self):
         while self.is_running:
             if self.is_paused:
                 time.sleep(0.1)
                 continue
             if self.batch > 0 and self.sent_count >= self.batch:
-                Clock.schedule_once(lambda dt: self._log("已达到批量限制"), 0)
+                Clock.schedule_once(lambda dt: self._log('达到批量限制'), 0)
                 break
-
-            if self.selected_mode == '随机':
-                msg = random.choice(self.messages)
-            elif self.selected_mode == '单条':
-                msg = self.messages[0]
-            else:
-                msg = self.messages[self.current_index % len(self.messages)]
-                self.current_index += 1
-
+            msg = self.messages[self.current_index % len(self.messages)]
+            self.current_index += 1
             try:
-                service = self._get_service()
-                if service:
-                    success = service.sendMessage(msg, pkg, 1, 300)
-                    if success:
+                svc = self._get_svc()
+                if svc:
+                    ok = svc.sendMessage(msg, None, 1, 300)
+                    if ok:
                         self.sent_count += 1
                         Clock.schedule_once(lambda dt, m=msg: self._on_sent(m, True), 0)
                     else:
-                        self._do_clipboard(msg)
+                        self._copy(msg)
                 else:
-                    self._do_clipboard(msg)
-            except Exception as e:
-                Logger.error(f'发送失败: {e}')
+                    self._copy(msg)
+            except Exception:
                 try:
-                    self._do_clipboard(msg)
+                    self._copy(msg)
                 except Exception:
                     break
             time.sleep(self.interval)
-        Clock.schedule_once(lambda dt: self._on_complete(), 0)
+        Clock.schedule_once(lambda dt: self._done(), 0)
 
-    def _do_clipboard(self, msg):
+    def _copy(self, msg):
         from kivy.core.clipboard import Clipboard
         Clipboard.copy(msg)
         self.sent_count += 1
@@ -286,23 +209,23 @@ class MessageApp(App):
     def _on_sent(self, msg, auto):
         self.count_text = str(self.sent_count)
         self._update_stats()
-        prefix = "自动发送" if auto else "已复制"
-        short = msg[:10] + '...' if len(msg) > 10 else msg
-        self._log(f"#{self.sent_count} {prefix}: {short}")
+        t = msg[:8] + '..' if len(msg) > 8 else msg
+        tag = '自动' if auto else '复制'
+        self._log(f'#{self.sent_count} {tag}: {t}')
 
-    def _on_complete(self):
+    def _done(self):
         self.is_running = False
         self.is_paused = False
         self.status_text = '完成'
         self._update_stats()
-        elapsed = time.time() - self.start_time if self.start_time else 0
-        self._log(f"完成: 共 {self.sent_count} 条, 耗时 {elapsed:.1f} 秒")
+        e = time.time() - self.start_time if self.start_time else 0
+        self._log(f'完成 {self.sent_count} 条 {e:.0f}秒')
 
     def _update_stats(self):
         if self.start_time:
-            elapsed = time.time() - self.start_time
-            speed = self.sent_count / elapsed if elapsed > 0 else 0
-            self.stats_text = f'速度: {speed:.1f} 条/秒 | 耗时: {elapsed:.0f} 秒'
+            e = time.time() - self.start_time
+            s = self.sent_count / e if e > 0 else 0
+            self.speed_text = f'{s:.1f}条/秒 | {e:.0f}秒'
 
     def _log(self, msg):
         ts = datetime.now().strftime('%H:%M:%S')
@@ -318,8 +241,8 @@ class MessageApp(App):
         return True
 
     def on_resume(self):
-        Clock.schedule_once(self._check_service, 1)
+        Clock.schedule_once(lambda dt: self._check_service(), 1)
 
 
 if __name__ == '__main__':
-    MessageApp().run()
+    MsgApp().run()

@@ -1,9 +1,9 @@
-# message.kv - 消息助手 v8.1
+# message.kv v9.0
 
-<AnimatedCard@BoxLayout>:
+<Card@BoxLayout>:
     orientation: 'vertical'
     padding: dp(16)
-    spacing: dp(10)
+    spacing: dp(8)
     size_hint_y: None
     height: self.minimum_height
     canvas.before:
@@ -12,263 +12,139 @@
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [dp(12)]
-
-<IOSSectionTitle@Label>:
-    font_size: sp(13)
-    font_name: app.font_name
-    color: 0.427, 0.427, 0.447, 1
-    size_hint_y: None
-    height: dp(20)
-    halign: 'left'
-    valign: 'middle'
-    text_size: self.size
+            radius: [dp(10)]
 
 <RootWidget>:
+    orientation: 'vertical'
     canvas.before:
         Color:
-            rgba: 0.949, 0.949, 0.969, 1
+            rgba: 0.96, 0.96, 0.96, 1
         Rectangle:
             pos: self.pos
             size: self.size
 
+    # 顶部标题栏
+    BoxLayout:
+        size_hint_y: None
+        height: dp(56)
+        padding: dp(16), 0
+        canvas.before:
+            Color:
+                rgba: 0.2, 0.2, 0.2, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        Label:
+            text: '[b]消息助手[/b]'
+            markup: True
+            font_size: sp(22)
+            font_name: app.font_name
+            color: 1, 1, 1, 1
+            halign: 'center'
+            text_size: self.size
+
     ScrollView:
         do_scroll_x: False
-        do_scroll_y: True
 
         BoxLayout:
             orientation: 'vertical'
-            padding: dp(16), dp(20), dp(16), dp(20)
-            spacing: dp(20)
+            padding: dp(12), dp(12)
+            spacing: dp(12)
             size_hint_y: None
             height: self.minimum_height
 
-            # ── 标题 ──
-            BoxLayout:
-                orientation: 'vertical'
-                size_hint_y: None
-                height: dp(60)
-                spacing: dp(4)
-
+            # 无障碍服务
+            Card:
                 Label:
-                    text: '消息助手 v8.1'
-                    font_size: sp(34)
+                    text: '[b]无障碍服务[/b]'
+                    markup: True
+                    font_size: sp(16)
                     font_name: app.font_name
-                    bold: True
-                    color: 0.11, 0.11, 0.118, 1
+                    color: 0.1, 0.1, 0.1, 1
                     size_hint_y: None
-                    height: dp(40)
+                    height: dp(28)
                     halign: 'left'
                     text_size: self.size
 
                 Label:
-                    text: '自动识别聊天框 · 完全自动发送'
+                    text: '已连接' if app.service_ok else '未开启 - 请点击下方按钮'
                     font_size: sp(15)
                     font_name: app.font_name
-                    color: 0.427, 0.427, 0.447, 1
+                    color: (0, 0.6, 0, 1) if app.service_ok else (0.9, 0.1, 0.1, 1)
+                    size_hint_y: None
+                    height: dp(24)
+                    halign: 'left'
+                    text_size: self.size
+
+                Button:
+                    text: '打开无障碍设置'
+                    font_size: sp(16)
+                    font_name: app.font_name
+                    size_hint_y: None
+                    height: dp(44)
+                    background_color: 0.15, 0.5, 0.9, 1
+                    color: 1, 1, 1, 1
+                    on_press: app.open_settings()
+
+                Label:
+                    text: '开启后会自动识别任意聊天框并发送'
+                    font_size: sp(13)
+                    font_name: app.font_name
+                    color: 0.4, 0.4, 0.4, 1
                     size_hint_y: None
                     height: dp(20)
                     halign: 'left'
                     text_size: self.size
 
-            # ── 无障碍服务状态 ──
-            AnimatedCard:
-                IOSSectionTitle:
-                    text: '无障碍服务'
-
-                BoxLayout:
+            # 消息输入
+            Card:
+                Label:
+                    text: '[b]消息内容[/b]  每行一条'
+                    markup: True
+                    font_size: sp(16)
+                    font_name: app.font_name
+                    color: 0.1, 0.1, 0.1, 1
                     size_hint_y: None
-                    height: dp(50)
-                    spacing: dp(12)
-
-                    Label:
-                        text: '状态: ' + app.service_status
-                        font_size: sp(17)
-                        font_name: app.font_name
-                        color: (0.204, 0.788, 0.349, 1) if '已连接' in app.service_status else (1, 0.231, 0.188, 1)
-                        halign: 'left'
-                        text_size: self.size
-
-                    Button:
-                        text: '开启无障碍'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: 0, 0.478, 1, 1
-                        color: 1, 1, 1, 1
-                        size_hint_x: 0.4
-                        size_hint_y: None
-                        height: dp(44)
-                        on_press: app.open_accessibility_settings()
-
-            # ── 目标应用 ──
-            AnimatedCard:
-                IOSSectionTitle:
-                    text: '目标应用'
-
-                GridLayout:
-                    cols: 3
-                    size_hint_y: None
-                    height: dp(100)
-                    spacing: dp(10)
-
-                    Button:
-                        text: '微信'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (0.204, 0.788, 0.349, 1) if app.selected_app == '微信' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_app == '微信' else 0.11
-                        on_press: app.select_app('微信')
-
-                    Button:
-                        text: 'QQ'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (0, 0.478, 1, 1) if app.selected_app == 'QQ' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_app == 'QQ' else 0.11
-                        on_press: app.select_app('QQ')
-
-                    Button:
-                        text: '钉钉'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (0.204, 0.627, 0.949, 1) if app.selected_app == '钉钉' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_app == '钉钉' else 0.11
-                        on_press: app.select_app('钉钉')
-
-                    Button:
-                        text: '飞书'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (0.204, 0.627, 0.949, 1) if app.selected_app == '飞书' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_app == '飞书' else 0.11
-                        on_press: app.select_app('飞书')
-
-                    Button:
-                        text: 'Telegram'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (0.114, 0.643, 0.949, 1) if app.selected_app == 'Telegram' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_app == 'Telegram' else 0.11
-                        on_press: app.select_app('Telegram')
-
-                    Button:
-                        text: 'WhatsApp'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (0.18, 0.722, 0.451, 1) if app.selected_app == 'WhatsApp' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_app == 'WhatsApp' else 0.11
-                        on_press: app.select_app('WhatsApp')
-
-            # ── 消息输入 ──
-            AnimatedCard:
-                IOSSectionTitle:
-                    text: '消息内容'
+                    height: dp(28)
+                    halign: 'left'
+                    text_size: self.size
 
                 TextInput:
                     id: msg_input
-                    hint_text: '输入消息，每行一条'
+                    hint_text: '在这里输入消息'
                     multiline: True
-                    font_size: sp(17)
+                    font_size: sp(18)
                     font_name: app.font_name
                     size_hint_y: None
-                    height: dp(150)
-                    padding: dp(12), dp(10)
-                    background_color: 0.95, 0.95, 0.97, 1
-                    foreground_color: 0.11, 0.11, 0.118, 1
-                    cursor_color: 0, 0.478, 1, 1
-                    on_text: app._update_char_count()
+                    height: dp(120)
+                    padding: dp(12)
+                    background_color: 0.94, 0.94, 0.94, 1
+                    foreground_color: 0, 0, 0, 1
+                    cursor_color: 0, 0, 0, 1
 
+            # 发送设置
+            Card:
                 Label:
-                    id: char_count
-                    text: '0 字符'
-                    font_size: sp(13)
+                    text: '[b]发送设置[/b]'
+                    markup: True
+                    font_size: sp(16)
                     font_name: app.font_name
-                    color: 0.627, 0.627, 0.647, 1
+                    color: 0.1, 0.1, 0.1, 1
                     size_hint_y: None
-                    height: dp(20)
-                    halign: 'right'
+                    height: dp(28)
+                    halign: 'left'
                     text_size: self.size
-
-                GridLayout:
-                    cols: 3
-                    size_hint_y: None
-                    height: dp(40)
-                    spacing: dp(10)
-
-                    Button:
-                        text: '表情'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: 0.204, 0.788, 0.349, 1
-                        color: 1, 1, 1, 1
-                        on_press: app.load_preset('emoji')
-
-                    Button:
-                        text: '问候'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: 1, 0.584, 0, 1
-                        color: 1, 1, 1, 1
-                        on_press: app.load_preset('greeting')
-
-                    Button:
-                        text: '数字'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: 0, 0.478, 1, 1
-                        color: 1, 1, 1, 1
-                        on_press: app.load_preset('numbers')
-
-            # ── 发送模式 ──
-            AnimatedCard:
-                IOSSectionTitle:
-                    text: '发送模式'
-
-                GridLayout:
-                    cols: 3
-                    size_hint_y: None
-                    height: dp(44)
-                    spacing: dp(10)
-
-                    Button:
-                        text: '顺序'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (0, 0.478, 1, 1) if app.selected_mode == '顺序' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_mode == '顺序' else 0.11
-                        on_press: app.select_mode('顺序')
-
-                    Button:
-                        text: '随机'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (0.204, 0.788, 0.349, 1) if app.selected_mode == '随机' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_mode == '随机' else 0.11
-                        on_press: app.select_mode('随机')
-
-                    Button:
-                        text: '单条'
-                        font_size: sp(15)
-                        font_name: app.font_name
-                        background_color: (1, 0.584, 0, 1) if app.selected_mode == '单条' else (0.9, 0.9, 0.9, 1)
-                        color: 1, 1, 1, 1 if app.selected_mode == '单条' else 0.11
-                        on_press: app.select_mode('单条')
-
-            # ── 速度设置 ──
-            AnimatedCard:
-                IOSSectionTitle:
-                    text: '发送设置'
 
                 BoxLayout:
                     size_hint_y: None
                     height: dp(44)
-                    spacing: dp(12)
+                    spacing: dp(8)
 
                     Label:
                         text: '间隔(秒)'
-                        font_size: sp(17)
+                        font_size: sp(16)
                         font_name: app.font_name
-                        color: 0.11, 0.11, 0.118, 1
+                        color: 0.2, 0.2, 0.2, 1
                         size_hint_x: 0.3
                         halign: 'left'
                         text_size: self.size
@@ -276,130 +152,133 @@
                     TextInput:
                         id: speed_input
                         text: '1.0'
-                        font_size: sp(17)
+                        font_size: sp(18)
                         font_name: app.font_name
-                        size_hint_x: 0.35
+                        size_hint_x: 0.3
                         size_hint_y: None
                         height: dp(40)
-                        padding: dp(10), dp(8)
-                        background_color: 0.95, 0.95, 0.97, 1
-                        foreground_color: 0.11, 0.11, 0.118, 1
+                        padding: dp(8)
+                        background_color: 0.94, 0.94, 0.94, 1
+                        foreground_color: 0, 0, 0, 1
                         input_filter: 'float'
                         multiline: False
 
                     Label:
-                        text: '批量'
-                        font_size: sp(17)
+                        text: '批量(0=无限)'
+                        font_size: sp(16)
                         font_name: app.font_name
-                        color: 0.11, 0.11, 0.118, 1
-                        size_hint_x: 0.15
+                        color: 0.2, 0.2, 0.2, 1
+                        size_hint_x: 0.25
                         halign: 'left'
                         text_size: self.size
 
                     TextInput:
                         id: batch_input
                         text: '0'
-                        font_size: sp(17)
+                        font_size: sp(18)
                         font_name: app.font_name
-                        size_hint_x: 0.2
+                        size_hint_x: 0.15
                         size_hint_y: None
                         height: dp(40)
-                        padding: dp(10), dp(8)
-                        background_color: 0.95, 0.95, 0.97, 1
-                        foreground_color: 0.11, 0.11, 0.118, 1
+                        padding: dp(8)
+                        background_color: 0.94, 0.94, 0.94, 1
+                        foreground_color: 0, 0, 0, 1
                         input_filter: 'int'
                         multiline: False
 
-            # ── 控制 ──
-            AnimatedCard:
-                IOSSectionTitle:
-                    text: '控制'
-
-                GridLayout:
-                    cols: 3
+            # 控制按钮
+            Card:
+                Label:
+                    text: '[b]控制[/b]'
+                    markup: True
+                    font_size: sp(16)
+                    font_name: app.font_name
+                    color: 0.1, 0.1, 0.1, 1
                     size_hint_y: None
-                    height: dp(55)
-                    spacing: dp(12)
-
-                    Button:
-                        id: btn_start
-                        text: '开始'
-                        font_size: sp(18)
-                        font_name: app.font_name
-                        bold: True
-                        background_color: 0.204, 0.788, 0.349, 1
-                        color: 1, 1, 1, 1
-                        size_hint_y: None
-                        height: dp(55)
-                        disabled: app.is_running
-                        on_press: app.start_sending()
-
-                    Button:
-                        id: btn_pause
-                        text: '暂停' if not app.is_paused else '继续'
-                        font_size: sp(18)
-                        font_name: app.font_name
-                        bold: True
-                        background_color: 1, 0.584, 0, 1
-                        color: 1, 1, 1, 1
-                        size_hint_y: None
-                        height: dp(55)
-                        disabled: not app.is_running
-                        on_press: app.pause_sending()
-
-                    Button:
-                        id: btn_stop
-                        text: '停止'
-                        font_size: sp(18)
-                        font_name: app.font_name
-                        bold: True
-                        background_color: 1, 0.231, 0.188, 1
-                        color: 1, 1, 1, 1
-                        size_hint_y: None
-                        height: dp(55)
-                        disabled: not app.is_running
-                        on_press: app.stop_sending()
-
-            # ── 状态 ──
-            AnimatedCard:
-                IOSSectionTitle:
-                    text: '状态'
+                    height: dp(28)
+                    halign: 'left'
+                    text_size: self.size
 
                 BoxLayout:
                     size_hint_y: None
                     height: dp(50)
+                    spacing: dp(10)
+
+                    Button:
+                        text: '开始发送'
+                        font_size: sp(18)
+                        font_name: app.font_name
+                        bold: True
+                        background_color: 0, 0.7, 0.3, 1
+                        color: 1, 1, 1, 1
+                        disabled: app.is_running
+                        on_press: app.start()
+
+                    Button:
+                        text: '暂停' if not app.is_paused else '继续'
+                        font_size: sp(18)
+                        font_name: app.font_name
+                        bold: True
+                        background_color: 1, 0.6, 0, 1
+                        color: 1, 1, 1, 1
+                        disabled: not app.is_running
+                        on_press: app.pause()
+
+                    Button:
+                        text: '停止'
+                        font_size: sp(18)
+                        font_name: app.font_name
+                        bold: True
+                        background_color: 0.9, 0.15, 0.15, 1
+                        color: 1, 1, 1, 1
+                        disabled: not app.is_running
+                        on_press: app.stop()
+
+            # 状态
+            Card:
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(36)
 
                     Label:
                         text: app.status_text
                         font_size: sp(17)
                         font_name: app.font_name
-                        color: (0.204, 0.788, 0.349, 1) if app.status_text == '运行中...' else (0.11, 0.11, 0.118, 1)
+                        color: 0.1, 0.1, 0.1, 1
                         halign: 'left'
                         text_size: self.size
 
                     Label:
                         text: app.count_text
-                        font_size: sp(32)
+                        font_size: sp(28)
                         font_name: app.font_name
                         bold: True
-                        color: 0, 0.478, 1, 1
+                        color: 0.15, 0.5, 0.9, 1
                         halign: 'right'
                         text_size: self.size
 
                 Label:
-                    text: app.stats_text
-                    font_size: sp(13)
+                    text: app.speed_text
+                    font_size: sp(14)
                     font_name: app.font_name
-                    color: 0.627, 0.627, 0.647, 1
+                    color: 0.4, 0.4, 0.4, 1
                     size_hint_y: None
                     height: dp(20)
                     halign: 'left'
                     text_size: self.size
 
-            # ── 日志 ──
-            AnimatedCard:
-                IOSSectionTitle:
-                    text: '日志'
+            # 日志
+            Card:
+                Label:
+                    text: '[b]日志[/b]'
+                    markup: True
+                    font_size: sp(16)
+                    font_name: app.font_name
+                    color: 0.1, 0.1, 0.1, 1
+                    size_hint_y: None
+                    height: dp(28)
+                    halign: 'left'
+                    text_size: self.size
 
                 TextInput:
                     id: log_area
@@ -407,8 +286,8 @@
                     font_size: sp(14)
                     font_name: app.font_name
                     size_hint_y: None
-                    height: dp(200)
-                    padding: dp(10), dp(8)
-                    background_color: 0.11, 0.11, 0.118, 1
-                    foreground_color: 0.204, 0.788, 0.349, 1
+                    height: dp(160)
+                    padding: dp(10)
+                    background_color: 0.15, 0.15, 0.15, 1
+                    foreground_color: 0, 1, 0.4, 1
                     cursor_color: 0, 0, 0, 0
