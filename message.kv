@@ -1,4 +1,4 @@
-# message.kv - 消息助手 v8.0
+# message.kv - 消息助手 v8.1
 
 <AnimatedCard@BoxLayout>:
     orientation: 'vertical'
@@ -24,7 +24,7 @@
     valign: 'middle'
     text_size: self.size
 
-RootWidget:
+<RootWidget>:
     canvas.before:
         Color:
             rgba: 0.949, 0.949, 0.969, 1
@@ -51,7 +51,7 @@ RootWidget:
                 spacing: dp(4)
 
                 Label:
-                    text: '消息助手 v8.0'
+                    text: '消息助手 v8.1'
                     font_size: sp(34)
                     font_name: app.font_name
                     bold: True
@@ -323,7 +323,7 @@ RootWidget:
 
                     Button:
                         id: btn_start
-                        text: '▶ 开始'
+                        text: '开始'
                         font_size: sp(18)
                         font_name: app.font_name
                         bold: True
@@ -336,7 +336,7 @@ RootWidget:
 
                     Button:
                         id: btn_pause
-                        text: '⏸ 暂停' if not app.is_paused else '▶ 继续'
+                        text: '暂停' if not app.is_paused else '继续'
                         font_size: sp(18)
                         font_name: app.font_name
                         bold: True
@@ -349,7 +349,7 @@ RootWidget:
 
                     Button:
                         id: btn_stop
-                        text: '⏹ 停止'
+                        text: '停止'
                         font_size: sp(18)
                         font_name: app.font_name
                         bold: True

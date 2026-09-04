@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-消息助手 v8.0 - 稳定版
-自动识别聊天框 + 完全自动发送
+消息助手 v8.1 - 修复空白屏幕
 """
 import os
 import threading
@@ -17,8 +16,17 @@ from kivy.utils import platform
 from kivy.logger import Logger
 from kivy.properties import StringProperty, BooleanProperty
 from kivy.uix.boxlayout import BoxLayout
+from kivy.lang import Builder
 
 ANDROID = platform == 'android'
+
+# ── 加载KV文件 ──
+KV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'message.kv')
+if os.path.exists(KV_PATH):
+    Builder.load_file(KV_PATH)
+    Logger.info('KV文件加载成功')
+else:
+    Logger.error(f'KV文件不存在: {KV_PATH}')
 
 # ── 字体注册 ──
 FONT_NAME = 'Roboto'
@@ -27,6 +35,9 @@ try:
     if os.path.exists(font_path):
         LabelBase.register(name='CN', fn_regular=font_path)
         FONT_NAME = 'CN'
+        Logger.info('中文字体加载成功')
+    else:
+        Logger.warning(f'字体文件不存在: {font_path}')
 except Exception as e:
     Logger.warning(f'字体加载失败: {e}')
 
@@ -70,23 +81,17 @@ class MessageApp(App):
         self._accessibility_service = None
 
     def build(self):
-        try:
-            Window.clearcolor = (0.949, 0.949, 0.969, 1)
-            root = RootWidget()
-            # 延迟检查无障碍服务
-            Clock.schedule_once(self._check_service, 1)
-            return root
-        except Exception as e:
-            Logger.error(f'构建UI失败: {e}')
-            # 返回一个简单的布局作为后备
-            return BoxLayout()
+        Window.clearcolor = (0.949, 0.949, 0.969, 1)
+        root = RootWidget()
+        Clock.schedule_once(self._check_service, 1)
+        return root
 
     def on_start(self):
         self._log("应用已启动")
         if ANDROID:
             self._log("请先开启无障碍服务")
         else:
-            self._log("当前为非Android环境，使用剪贴板模式")
+            self._log("非Android环境，使用剪贴板模式")
 
     # ══════════════════════════════════════
     # 无障碍服务管理
@@ -192,7 +197,6 @@ class MessageApp(App):
             self._log("消息内容为空")
             return
 
-        # 读取设置
         try:
             speed_text = self.root.ids.speed_input.text
             self.interval = max(0.1, float(speed_text))
@@ -205,7 +209,6 @@ class MessageApp(App):
         except Exception:
             self.batch = 0
 
-        # 初始化状态
         self.is_running = True
         self.is_paused = False
         self.sent_count = 0
@@ -214,8 +217,6 @@ class MessageApp(App):
         self.status_text = '运行中...'
 
         self._log(f"开始发送 {len(self.messages)} 条消息")
-
-        # 启动发送线程
         self._send_thread = threading.Thread(target=self._send_loop, daemon=True)
         self._send_thread.start()
 
@@ -231,7 +232,6 @@ class MessageApp(App):
         self.is_paused = False
         self.status_text = '已停止'
         self._log("已停止")
-
         service = self._get_service()
         if service:
             try:
@@ -241,17 +241,14 @@ class MessageApp(App):
 
     def _send_loop(self):
         pkg = APP_PACKAGES.get(self.selected_app, 'com.tencent.mm')
-
         while self.is_running:
             if self.is_paused:
                 time.sleep(0.1)
                 continue
-
             if self.batch > 0 and self.sent_count >= self.batch:
                 Clock.schedule_once(lambda dt: self._log("已达到批量限制"), 0)
                 break
 
-            # 选择消息
             if self.selected_mode == '随机':
                 msg = random.choice(self.messages)
             elif self.selected_mode == '单条':
@@ -260,7 +257,6 @@ class MessageApp(App):
                 msg = self.messages[self.current_index % len(self.messages)]
                 self.current_index += 1
 
-            # 发送
             try:
                 service = self._get_service()
                 if service:
@@ -278,9 +274,7 @@ class MessageApp(App):
                     self._do_clipboard(msg)
                 except Exception:
                     break
-
             time.sleep(self.interval)
-
         Clock.schedule_once(lambda dt: self._on_complete(), 0)
 
     def _do_clipboard(self, msg):
