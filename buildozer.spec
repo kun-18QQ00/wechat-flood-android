@@ -5,9 +5,9 @@ package.domain = org.msg
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json,ttf,otf,xml,html,css,js
 source.include_patterns = fonts/*,res/xml/*,assets/**
-version = 10.0.0
+version = 10.1.0
 requirements = python3,kivy,pyjnius,android
-android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,VIBRATE,FOREGROUND_SERVICE,SYSTEM_ALERT_WINDOW
+android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,VIBRATE,FOREGROUND_SERVICE,SYSTEM_ALERT_WINDOW,BIND_ACCESSIBILITY_SERVICE
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
@@ -17,6 +17,7 @@ orientation = portrait
 fullscreen = 0
 android.allow_backup = True
 android.manifest.custom_enabled = true
+android.add_src = src
 
 # 图标
 icon.filename = %(source.dir)s/assets/icon.png
